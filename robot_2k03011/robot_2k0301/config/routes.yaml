@@ -1,0 +1,177 @@
+# Route actions for robot_board_app --route.
+# One floor tile is about 0.8 m, so the sample routes use 0.8 m steps.
+
+routes:
+  tile_test:
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+
+    - move: forward
+      # Route executor subtracts left-turn compensation automatically.
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+  tile_forward:
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+  turn_left_90:
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+
+  turn_right_90:
+    - turn: right
+      angle: 90
+      speed: 30
+      timeout: 25
+
+  # Full-circle tests. The Ackermann chassis follows an arc, so leave
+  # enough clearance around the car before running either route.
+  turn_left_360:
+    - turn: left
+      angle: 360
+      speed: 30
+      timeout: 70
+
+  turn_right_360:
+    - turn: right
+      angle: 360
+      speed: 30
+      timeout: 70
+
+  # Detect obstacle, bypass it on the right, then stop at the next obstacle.
+  obstacle_avoid_test:
+    - move_until_obstacle: forward
+      max_distance: 3.0
+      speed: 40
+      stop_distance: 100
+      slow_distance: 350
+      timeout: 30
+
+    - turn: right
+      angle: 90
+      speed: 30
+      timeout: 25
+      # The obstacle that triggered this maneuver is still in front at startup.
+      allow_initial_front_obstacle: 1
+
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+      # Right turn already advances about 0.37 m; subtract it from this leg.
+      turn_compensation: 1
+
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+
+    - move_until_obstacle: forward
+      max_distance: 3.0
+      speed: 40
+      stop_distance: 100
+      slow_distance: 350
+      timeout: 30
+
+  tile_test_right:
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+    - turn: right
+      angle: 90
+      speed: 30
+      timeout: 25
+
+    - move: forward
+      # Route executor subtracts right-turn compensation automatically.
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+  patrol_demo:
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+    - log: reached_point_A
+    - beep: 2
+    - wait: 2
+
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+
+    - log: reached_point_B
+    - beep: 3
+    - wait: 2
+
+    - turn: right
+      angle: 90
+      speed: 30
+      timeout: 25
+
+  task_demo:
+    - log: task_start
+    - beep: 1
+    - servo: 95
+    - wait: 1
+    - beep: 2
+      on_ms: 120
+      off_ms: 80
+    - log: task_done
+
+  tile_square:
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25
+    - move: forward
+      distance: 0.8
+      speed: 50
+      timeout: 20
+    - turn: left
+      angle: 90
+      speed: 30
+      timeout: 25

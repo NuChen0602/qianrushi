@@ -1,0 +1,114 @@
+{
+  "missions": {
+    "RECOMMEND_BOOKS": {
+      "title": "推荐文学小说",
+      "type": "simple_speech",
+      "speech": "RECOMMEND_BOOKS"
+    },
+    "FIND_BOOK": {
+      "title": "寻书引导",
+      "type": "sequence",
+      "steps": [
+        {
+          "action": "speech",
+          "speech": "FINDING_BOOK"
+        },
+        {
+          "action": "goto",
+          "point": "LIT_SHELF_A3",
+          "arrive_event": "ARRIVED:LIT_SHELF_A3"
+        },
+        {
+          "action": "speech",
+          "speech": "ARRIVED_LIT"
+        },
+        {
+          "action": "vision_stub",
+          "mode": "aruco_book",
+          "expected_book_id": 203,
+          "result_text": "已识别到《百年孤独》，从左往右第三本"
+        },
+        {
+          "action": "speech",
+          "speech": "FOUND_BOOK"
+        }
+      ]
+    },
+    "INTRO_BOOK": {
+      "title": "介绍这本书",
+      "type": "simple_speech",
+      "speech": "INTRO_BOOK"
+    },
+    "SHELF_CHECK": {
+      "title": "书架错放巡检",
+      "type": "patrol",
+      "start_speech": "SHELF_CHECK_START",
+      "route": [
+        "ENG_SHELF_B1",
+        "ENG_TO_SCI_MID",
+        "SCI_SHELF_C1",
+        "SCI_TO_LIT_MID",
+        "LIT_SHELF_A3"
+      ],
+      "point_events": {
+        "ENG_SHELF_B1": {
+          "work_order": "发现《工程控制论》疑似错放",
+          "speech": "MISPLACED_CONTROL"
+        },
+        "LIT_SHELF_A3": {
+          "work_order": "发现《苏东坡传》疑似错放",
+          "speech": "MISPLACED_SU"
+        }
+      }
+    },
+    "LOST_ITEM_PATROL": {
+      "title": "全图遗失物巡检",
+      "type": "patrol",
+      "start_speech": "LOST_PATROL_START",
+      "route": [
+        "LOST_KEY_POINT",
+        "HAZARD_3_EXIT",
+        "START_HOME"
+      ],
+      "point_events": {
+        "LOST_KEY_POINT": {
+          "vision_mode": "lost",
+          "work_order": "发现钥匙和校园卡，请及时拾取",
+          "speech": "LOST_KEY_FOUND"
+        }
+      }
+    },
+    "HAZARD_CHECK": {
+      "title": "高危点位检查",
+      "type": "patrol",
+      "start_speech": "HAZARD_START",
+      "route": [
+        "HAZARD_1_SOCKET",
+        "HAZARD_2_FIRE",
+        "HAZARD_3_EXIT",
+        "START_HOME"
+      ],
+      "point_events": {
+        "HAZARD_2_FIRE": {
+          "vision_mode": "fire",
+          "work_order": "传感器异常，存在起火风险",
+          "speech": "HAZARD_FIRE"
+        }
+      },
+      "point_actions": {
+        "HAZARD_2_FIRE": {
+          "work_order": "传感器异常，存在起火风险"
+        }
+      }
+    },
+    "RETURN_HOME": {
+      "title": "返回起点",
+      "type": "goto",
+      "point": "START_HOME"
+    },
+    "CANCEL": {
+      "title": "停止当前任务",
+      "type": "cancel"
+    }
+  }
+}

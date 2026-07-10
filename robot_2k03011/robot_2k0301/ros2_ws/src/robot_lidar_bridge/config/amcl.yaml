@@ -1,0 +1,56 @@
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    base_frame_id: base_link
+    global_frame_id: map
+    odom_frame_id: odom
+    scan_topic: scan
+    tf_broadcast: true
+    transform_tolerance: 0.2
+
+    robot_model_type: nav2_amcl::DifferentialMotionModel
+    # AMCL has no Ackermann motion model. Use the differential approximation
+    # with enough uncertainty for steering geometry, tyre scrub and IMU yaw
+    # error, otherwise the particle cloud collapses around drifting odometry.
+    alpha1: 0.20
+    alpha2: 0.15
+    alpha3: 0.10
+    alpha4: 0.20
+    alpha5: 0.10
+
+    min_particles: 1200
+    max_particles: 5000
+    pf_err: 0.02
+    pf_z: 0.99
+    resample_interval: 1
+    recovery_alpha_fast: 0.1
+    recovery_alpha_slow: 0.001
+
+    # Publish/update localization even while the robot is waiting at the start.
+    # Navigation safety gates motion on fresh /amcl_pose; if AMCL only updates
+    # after odometry movement, the robot can be correctly localized but still be
+    # held stopped by a pose timeout before the first command is allowed out.
+    update_min_d: 0.01
+    update_min_a: 0.01
+    max_beams: 240
+    laser_min_range: 0.05
+    laser_max_range: 3.0
+    laser_model_type: likelihood_field_prob
+    # Keep useful likelihood gradients when odometry is 10-30 cm away from
+    # the wall. The previous 6 cm model became overconfident too quickly.
+    laser_likelihood_max_dist: 0.35
+    sigma_hit: 0.12
+    lambda_short: 0.1
+    z_hit: 0.82
+    z_rand: 0.13
+    z_short: 0.05
+    z_max: 0.0
+    do_beamskip: true
+    beam_skip_distance: 0.35
+    beam_skip_threshold: 0.30
+    beam_skip_error_threshold: 0.90
+
+    set_initial_pose: false
+    always_reset_initial_pose: false
+    first_map_only: false
+    save_pose_rate: 0.5

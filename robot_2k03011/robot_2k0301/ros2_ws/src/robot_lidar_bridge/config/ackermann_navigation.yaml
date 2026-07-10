@@ -1,0 +1,168 @@
+ackermann_path_planner:
+  ros__parameters:
+    map_frame: map
+    base_frame: base_link
+    map_topic: /navigation/planning_map
+    goal_topic: /goal_pose
+    path_topic: /planned_path
+    replan_topic: /navigation/replan
+    cancel_topic: /navigation/cancel
+    status_topic: /planner/status
+
+    # The car is 0.26 m long and 0.135 m wide.
+    vehicle_length: 0.26
+    vehicle_width: 0.135
+    wheelbase: 0.18
+    safety_margin: 0.010
+
+    # Hybrid A* discretization and bicycle-model motion primitives.
+    xy_resolution: 0.04
+    yaw_resolution_deg: 10.0
+    primitive_length: 0.08
+    integration_step: 0.02
+    # Use the real turn capability, not the optimistic servo endpoint. If this
+    # is too high, Hybrid A* produces green curves the car cannot physically
+    # follow, especially on left turns.
+    max_steer_angle_deg: 28.0
+    steering_samples: 5
+    goal_tolerance: 0.10
+    goal_yaw_tolerance_deg: 30.0
+    # Bias Hybrid A* toward the RViz 2D Goal Pose arrow. A larger heading
+    # heuristic lets the first strict-yaw search accept a slightly longer path
+    # instead of arriving near the goal and fixing yaw with many small moves.
+    heading_heuristic_weight: 1.20
+    # If strict yaw planning fails, fallback paths still have to stay close to
+    # the RViz arrow instead of accepting a visibly wrong final heading.
+    relaxed_goal_yaw_tolerance_deg: 45.0
+    relaxed_heading_heuristic_weight: 0.60
+    # If localization/map discretization puts the current pose just inside a
+    # wall, seed planning from the nearest free pose within this radius.
+    start_collision_tolerance: 0.16
+    approach_goal_on_failure: true
+    approach_goal_tolerance: 0.20
+    allow_goal_yaw_fallback: true
+    allow_reverse: true
+    reverse_cost_multiplier: 1.4
+    direction_switch_cost: 0.4
+    max_expansions: 120000
+    # Total budget for strict yaw, approach, and relaxed-yaw fallback together.
+    # Each stage also has a cap. Strict/approach yaw get more time so the first
+    # path can favor the requested angle even when that makes the route longer.
+    # A new RViz goal cancels the old planning thread, so this should stay
+    # finite instead of unlimited.
+    planning_timeout_sec: 30.0
+    planning_stage_timeout_sec: 10.0
+
+    occupied_threshold: 65
+    unknown_is_occupied: true
+
+goal_navigator:
+  ros__parameters:
+    map_frame: map
+    base_frame: base_link
+    goal_topic: /goal_pose
+    path_topic: /planned_path
+    cmd_vel_topic: /cmd_vel
+    replan_topic: /navigation/replan
+    planner_status_topic: /planner/status
+    localization_ok_topic: /navigation/localization_ok
+    localization_status_topic: /navigation/localization_status
+    path_blocked_topic: /navigation/path_blocked
+    obstacle_status_topic: /navigation/obstacle_status
+    cancel_topic: /navigation/cancel
+    emergency_stop_topic: /navigation/emergency_stop
+    status_topic: /navigation/status
+    control_rate_hz: 20.0
+
+    max_speed_mps: 0.26
+    min_speed_mps: 0.10
+    goal_tolerance_m: 0.10
+    goal_yaw_tolerance_deg: 30.0
+    final_yaw_control_radius_m: 0.25
+    slow_radius_m: 0.45
+    lookahead_min_m: 0.12
+    lookahead_max_m: 0.24
+    lookahead_speed_gain: 0.55
+    lookahead_curvature_gain: 0.35
+    # Keep nearest-point tracking local so short self-overlapping reverse
+    # maneuvers do not skip their first half.
+    path_index_search_forward: 8
+    max_cross_track_error_m: 0.30
+    cross_track_kp: 1.60
+    cross_track_steering_limit: 0.25
+
+    heading_pid_kp: 0.75
+    heading_pid_ki: 0.0
+    heading_pid_kd: 0.10
+    heading_pid_integral_limit: 0.35
+    heading_derivative_filter: 0.25
+    max_steering_command: 1.00
+    # Positive steering maps to servo > center, i.e. left turn on this car.
+    left_steering_gain: 1.45
+    right_steering_gain: 1.00
+    max_steering_rate_per_sec: 1.2
+    max_front_wheel_angle_deg: 28.0
+    wheelbase_m: 0.18
+    curvature_feedforward_gain: 0.90
+    curvature_feedforward_lookahead_m: 0.24
+    max_steering_rate_deg_per_sec: 75.0
+    heading_slow_angle_rad: 0.45
+
+    # Slow down before curvature, then apply jerk-limited acceleration.
+    curvature_lookahead_m: 0.45
+    curvature_speed_gain: 0.28
+    min_curve_speed_mps: 0.15
+    max_acceleration_mps2: 0.45
+    max_deceleration_mps2: 0.45
+    max_jerk_mps3: 1.8
+    path_timeout_sec: 120.0
+    status_period_sec: 0.5
+    replan_cooldown_sec: 2.0
+
+    # Stop first, then retry a fresh Hybrid A* plan. No blind reverse recovery.
+    max_recovery_attempts: 3
+    recovery_retry_delay_sec: 1.5
+    obstacle_replan_delay_sec: 2.5
+    obstacle_failure_timeout_sec: 20.0
+    localization_failure_timeout_sec: 15.0
+    safety_status_timeout_sec: 1.5
+    stuck_timeout_sec: 3.0
+    minimum_progress_m: 0.03
+    degraded_localization_speed_scale: 0.65
+
+navigation_safety:
+  ros__parameters:
+    map_frame: map
+    base_frame: base_link
+    map_topic: /map
+    planning_map_topic: /navigation/planning_map
+    scan_topic: /scan
+    path_topic: /planned_path
+    amcl_pose_topic: /amcl_pose
+    odom_topic: /odom
+    localization_status_topic: /navigation/localization_status
+    localization_ok_topic: /navigation/localization_ok
+    obstacle_status_topic: /navigation/obstacle_status
+    path_blocked_topic: /navigation/path_blocked
+
+    publish_rate_hz: 5.0
+    scan_stride: 2
+    dynamic_obstacle_ttl_sec: 0.8
+    dynamic_inflation_radius_m: 0.06
+    static_match_radius_m: 0.08
+    path_corridor_radius_m: 0.08
+    path_lookahead_m: 0.80
+    min_dynamic_range_m: 0.12
+    max_dynamic_range_m: 2.5
+    occupied_threshold: 65
+    block_confirm_samples: 4
+    clear_confirm_samples: 2
+
+    localization_good_samples: 3
+    pose_timeout_sec: 2.0
+    scan_timeout_sec: 0.8
+    odom_timeout_sec: 0.8
+    warn_xy_std_m: 0.12
+    fail_xy_std_m: 0.25
+    warn_yaw_std_deg: 15.0
+    fail_yaw_std_deg: 30.0

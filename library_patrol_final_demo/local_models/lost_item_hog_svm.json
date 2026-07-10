@@ -1,0 +1,47 @@
+{
+  "model_type": "opencv_hog_linear_svm",
+  "input_size": [
+    96,
+    96
+  ],
+  "classes": {
+    "0": "background",
+    "1": "target_bundle"
+  },
+  "raw_sign": -1.0,
+  "decision_threshold": -0.3,
+  "near_min_aspect": 2.2,
+  "near_width_reference": 145.0,
+  "near_threshold_slope": 0.006,
+  "near_threshold_floor": -0.95,
+  "source_dataset": "/home/chen/Library_Patrol_Project/library_patrol_final_demo/candidate_datasets/20260710_171050",
+  "purified_dataset": "/home/chen/Library_Patrol_Project/library_patrol_final_demo/candidate_datasets/20260710_171901_purified",
+  "seed_positive_session": "20260710_165712",
+  "seed_background_session": "20260710_170352",
+  "validation_positive_session": "20260710_170030",
+  "validation_background_session": "20260710_170641",
+  "counts": {
+    "train/target_bundle": 330,
+    "train/background": 537,
+    "val/target_bundle": 157,
+    "val/background": 540
+  },
+  "deploy_counts": {
+    "target_bundle": 487,
+    "background": 1077
+  },
+  "seed_rejected_positive_crops": 44,
+  "validation": {
+    "tp": 155,
+    "tn": 538,
+    "fp": 2,
+    "fn": 2,
+    "accuracy": 0.994261119081779,
+    "precision": 0.9872611464968153,
+    "recall": 0.9872611464968153
+  },
+  "validation_margin": {
+    "positive_mean": 0.35736003518104553,
+    "negative_mean": -0.97385174036026
+  }
+}

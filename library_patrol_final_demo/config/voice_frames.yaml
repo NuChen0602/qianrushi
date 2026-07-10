@@ -1,0 +1,87 @@
+commands:
+  A1:
+    name: 推荐文学小说
+    frame: AA 55 00 A1 FB
+    mission: RECOMMEND_BOOKS
+  A2:
+    name: 寻找百年孤独
+    frame: AA 55 00 A2 FB
+    mission: FIND_BOOK
+  A3:
+    name: 介绍这本书
+    frame: AA 55 00 A3 FB
+    mission: INTRO_BOOK
+  A4:
+    name: 检查当前书架
+    frame: AA 55 00 A4 FB
+    mission: SHELF_CHECK
+  A5:
+    name: 扫描遗失物
+    frame: AA 55 00 A5 FB
+    mission: LOST_ITEM_PATROL
+  A6:
+    name: 检查高危点位
+    frame: AA 55 00 A6 FB
+    mission: HAZARD_CHECK
+  A7:
+    name: 开始全图巡检
+    frame: AA 55 00 A7 FB
+    mission: LOST_ITEM_PATROL
+  A8:
+    name: 返回起点
+    frame: AA 55 00 A8 FB
+    mission: RETURN_HOME
+  A9:
+    name: 停止当前任务
+    frame: AA 55 00 A9 FB
+    mission: CANCEL
+speeches:
+  RECOMMEND_BOOKS:
+    frame: AA 55 FF 70 FB
+    text: 推荐百年孤独、霍乱时期的爱情和瓦尔登湖。
+  FINDING_BOOK:
+    frame: AA 55 FF 71 FB
+    text: 正在查找百年孤独。
+  ARRIVED_LIT:
+    frame: AA 55 FF 72 FB
+    text: 已到达文学书架。
+  FOUND_BOOK:
+    frame: AA 55 FF 73 FB
+    text: 找到了，百年孤独在从左往右第三本。
+  INTRO_BOOK:
+    frame: AA 55 FF 74 FB
+    text: 百年孤独讲述布恩迪亚家族七代人的故事。
+  SHELF_CHECK_START:
+    frame: AA 55 FF 75 FB
+    text: 开始书架错放巡检。
+  MISPLACED_SU:
+    frame: AA 55 FF 77 FB
+    text: 发现苏东坡传疑似错放。
+  MISPLACED_CONTROL:
+    frame: AA 55 FF 79 FB
+    text: 发现工程控制论疑似错放。
+  LOST_PATROL_START:
+    frame: AA 55 FF 7B FB
+    text: 开始地面遗失物巡检。
+  LOST_KEY_FOUND:
+    frame: AA 55 FF 7C FB
+    text: 发现钥匙和校园卡，请及时拾取。
+  HAZARD_START:
+    frame: AA 55 FF 7E FB
+    text: 开始检查高危点位。
+  HAZARD_SOCKET:
+    frame: AA 55 FF 82 FB
+    text: 传感器异常，存在起火风险。
+    disabled: false
+  HAZARD_FIRE:
+    frame: AA 55 FF 82 FB
+    text: 传感器异常，存在起火风险。
+    disabled: false
+  HAZARD_EXIT:
+    frame: AA 55 FF 82 FB
+    text: 传感器异常，存在起火风险。
+    disabled: false
+  text: 传感器异常，存在起火风险。
+  disabled: false
+text: 传感器异常，存在起火风险。
+disabled: false

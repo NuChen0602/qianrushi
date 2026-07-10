@@ -1,0 +1,71 @@
+#!/bin/sh
+
+DAEMON=/home/root/voice_motion_test
+CONFIG=/home/root/voice_motion_config.ini
+LOG=/home/root/voice_motion.log
+PIDFILE=/var/run/voice_motion_test.pid
+MODE_FILE=/home/root/voice_motion_mode
+AGENT_PORT=${AGENT_PORT:-15000}
+
+start() {
+    if [ ! -x "$DAEMON" ]; then
+        echo "voice_motion_test not found: $DAEMON"
+        return 1
+    fi
+
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "voice_motion_test already running"
+        return 0
+    fi
+
+    MODE=run
+    if [ -f "$MODE_FILE" ]; then
+        MODE="$(cat "$MODE_FILE")"
+    fi
+    case "$MODE" in
+        run|agent)
+            ;;
+        *)
+            echo "unknown mode '$MODE', fallback to run"
+            MODE=run
+            ;;
+    esac
+
+    echo "starting voice_motion_test mode=$MODE"
+    (
+        sleep 5
+        if [ "$MODE" = "agent" ]; then
+            "$DAEMON" agent --config "$CONFIG" --port "$AGENT_PORT" >> "$LOG" 2>&1
+        else
+            "$DAEMON" run --config "$CONFIG" >> "$LOG" 2>&1
+        fi
+    ) &
+    echo $! > "$PIDFILE"
+}
+
+stop() {
+    echo "stopping voice_motion_test"
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        rm -f "$PIDFILE"
+    fi
+    killall voice_motion_test 2>/dev/null || true
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 1
+        start
+        ;;
+    *)
+        echo "usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

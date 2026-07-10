@@ -1,0 +1,77 @@
+{
+  "layout": {
+    "name": "四牌楼校区图书馆一层仿真区",
+    "bounds": {"min_x": -3.5, "max_x": 3.5, "min_y": -2.8, "max_y": 2.8},
+    "walls": [
+      {"id": "north_wall", "label": "北侧墙", "x": 0.0, "y": 2.65, "width": 7.0, "height": 0.12},
+      {"id": "south_wall", "label": "南侧墙", "x": 0.0, "y": -2.65, "width": 7.0, "height": 0.12},
+      {"id": "west_wall", "label": "西侧墙", "x": -3.45, "y": 0.0, "width": 0.12, "height": 5.4},
+      {"id": "east_wall", "label": "东侧墙", "x": 3.45, "y": 0.0, "width": 0.12, "height": 5.4}
+    ],
+    "obstacles": [
+      {"id": "shelf_a1", "label": "A区视觉书架1", "kind": "bookshelf", "x": 2.15, "y": 0.45, "width": 0.22, "height": 1.45},
+      {"id": "shelf_a2", "label": "A区视觉书架2", "kind": "bookshelf", "x": 2.75, "y": 0.45, "width": 0.22, "height": 1.45},
+      {"id": "shelf_b1", "label": "B区文学书架1", "kind": "bookshelf", "x": -2.1, "y": 1.15, "width": 1.2, "height": 0.22},
+      {"id": "shelf_b2", "label": "B区文学书架2", "kind": "bookshelf", "x": -2.1, "y": 1.75, "width": 1.2, "height": 0.22},
+      {"id": "desk_1", "label": "阅览桌1", "kind": "desk", "x": -0.75, "y": -1.0, "width": 1.0, "height": 0.42},
+      {"id": "desk_2", "label": "阅览桌2", "kind": "desk", "x": 0.75, "y": -1.0, "width": 1.0, "height": 0.42},
+      {"id": "service_counter", "label": "服务台", "kind": "counter", "x": -2.25, "y": -1.7, "width": 1.2, "height": 0.35}
+    ],
+    "objects": [
+      {"id": "hazard_socket_red", "label": "红色违规插座/热源模拟点", "kind": "hazard", "x": 2.8, "y": 1.5},
+      {"id": "lost_card_blue", "label": "蓝色校园卡模拟点", "kind": "lost_item", "x": 1.5, "y": -1.0}
+    ]
+  },
+  "areas": [
+    {
+      "id": "area_a",
+      "name": "A区",
+      "label": "计算机视觉/机器人书架",
+      "x": 2.5,
+      "y": 1.0,
+      "keywords": ["视觉", "机器人", "opencv", "slam", "导航", "人工智能", "入门书"]
+    },
+    {
+      "id": "area_b",
+      "name": "B区",
+      "label": "文学/历史书架",
+      "x": -1.5,
+      "y": 2.0,
+      "keywords": ["文学", "历史", "小说", "人文"]
+    },
+    {
+      "id": "study_socket_zone",
+      "name": "C区",
+      "label": "自习室/插座巡检区",
+      "x": 2.8,
+      "y": 1.5,
+      "keywords": ["插座", "接线板", "自习室", "充电", "火灾", "巡检", "红外"]
+    },
+    {
+      "id": "lost_found_scan_lane",
+      "name": "低视角扫描通道",
+      "label": "阅览桌椅下方失物扫描区",
+      "x": 1.5,
+      "y": -1.0,
+      "keywords": ["校园卡", "钥匙", "书", "掉了", "遗失", "失物", "招领"]
+    }
+  ],
+  "holdings": [
+    {
+      "title": "机器人视觉入门",
+      "area_id": "area_a",
+      "keywords": ["机器人视觉", "视觉入门", "opencv", "机器人"]
+    },
+    {
+      "title": "SLAM与自主导航",
+      "area_id": "area_a",
+      "keywords": ["slam", "导航", "定位", "建图"]
+    },
+    {
+      "title": "中国文学史",
+      "area_id": "area_b",
+      "keywords": ["文学史", "文学", "历史"]
+    }
+  ],
+  "patrol_route": ["area_a", "study_socket_zone", "lost_found_scan_lane", "area_b"]
+}

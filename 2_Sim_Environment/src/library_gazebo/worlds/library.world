@@ -1,0 +1,125 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="library_world">
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+    <include><uri>model://sun</uri></include>
+    <include><uri>model://ground_plane</uri></include>
+
+    <model name="north_wall">
+      <pose>0 2.65 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>7.0 0.12 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>7.0 0.12 1.0</size></box></geometry><material><ambient>0.72 0.72 0.68 1</ambient><diffuse>0.72 0.72 0.68 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="south_wall">
+      <pose>0 -2.65 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>7.0 0.12 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>7.0 0.12 1.0</size></box></geometry><material><ambient>0.72 0.72 0.68 1</ambient><diffuse>0.72 0.72 0.68 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="west_wall">
+      <pose>-3.45 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.12 5.4 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.12 5.4 1.0</size></box></geometry><material><ambient>0.72 0.72 0.68 1</ambient><diffuse>0.72 0.72 0.68 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="east_wall">
+      <pose>3.45 0 0.5 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.12 5.4 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.12 5.4 1.0</size></box></geometry><material><ambient>0.72 0.72 0.68 1</ambient><diffuse>0.72 0.72 0.68 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="shelf_a1">
+      <pose>2.15 0.45 0.75 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.22 1.45 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.22 1.45 1.5</size></box></geometry><material><script><name>Gazebo/Wood</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="shelf_a2">
+      <pose>2.75 0.45 0.75 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.22 1.45 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.22 1.45 1.5</size></box></geometry><material><script><name>Gazebo/Wood</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="shelf_b1">
+      <pose>-2.1 1.15 0.75 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.2 0.22 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.2 0.22 1.5</size></box></geometry><material><script><name>Gazebo/Wood</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="shelf_b2">
+      <pose>-2.1 1.75 0.75 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.2 0.22 1.5</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.2 0.22 1.5</size></box></geometry><material><script><name>Gazebo/Wood</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="desk_1">
+      <pose>-0.75 -1.0 0.35 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.0 0.42 0.7</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.0 0.42 0.7</size></box></geometry><material><ambient>0.38 0.48 0.56 1</ambient><diffuse>0.38 0.48 0.56 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="desk_2">
+      <pose>0.75 -1.0 0.35 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.0 0.42 0.7</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.0 0.42 0.7</size></box></geometry><material><ambient>0.38 0.48 0.56 1</ambient><diffuse>0.38 0.48 0.56 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="service_counter">
+      <pose>-2.25 -1.7 0.45 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1.2 0.35 0.9</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1.2 0.35 0.9</size></box></geometry><material><ambient>0.64 0.55 0.43 1</ambient><diffuse>0.64 0.55 0.43 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <model name="hazard_socket_red">
+      <pose>2.8 1.5 0.05 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.14 0.22 0.1</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.22 0.1</size></box></geometry><material><script><name>Gazebo/Red</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="lost_card_blue">
+      <pose>1.5 -1.0 0.015 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.12 0.08 0.01</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>0.12 0.08 0.01</size></box></geometry><material><script><name>Gazebo/Blue</name></script></material></visual>
+      </link>
+    </model>
+  </world>
+</sdf>

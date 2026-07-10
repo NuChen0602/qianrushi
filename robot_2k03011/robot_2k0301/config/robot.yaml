@@ -1,0 +1,93 @@
+# Board app runtime config.
+# Parser reads simple "key: value" pairs only.
+
+control_period_ms: 10
+
+speed_KP_l: 2
+speed_KI_l: 0
+speed_KD_l: 0
+speed_IMAX_l: 1500
+speed_OUTMAX_l: 1500
+speed_target_l: 150
+speed_b_l: 520
+speed_k_l: 40
+
+speed_KP_r: 2
+speed_KI_r: 0
+speed_KD_r: 0
+speed_IMAX_r: 1500
+speed_OUTMAX_r: 1500
+speed_target_r: 150
+speed_b_r: 520
+speed_k_r: 40
+
+speed_dif_p: 0
+left_speed_min_pwm: 2500
+right_speed_min_pwm: 2500
+
+left_motor_pwm: /dev/zf_pwm_motor_1
+right_motor_pwm: /dev/zf_pwm_motor_2
+left_motor_dir: /dev/zf_gpio_motor_1
+right_motor_dir: /dev/zf_gpio_motor_2
+left_motor_forward_dir: 0
+right_motor_forward_dir: 0
+
+left_encoder: /dev/zf_encoder_dir_2
+right_encoder: /dev/zf_encoder_dir_1
+left_encoder_sign: 1
+right_encoder_sign: -1
+left_encoder_counts_per_meter: 13781.0
+right_encoder_counts_per_meter: 13696.0
+
+steering_servo_pwm: /dev/zf_pwm_servo_1
+servo_center_deg: 95
+servo_left_deg: 125
+servo_right_deg: 80
+servo_settle_ms: 150
+turn_inner_speed_ratio: 0.60
+
+imu_heading_enable: 1
+heading_KP: 2.0
+heading_KI: 0
+heading_KD: 0
+heading_output_limit_deg: 12
+heading_servo_dir: -1
+imu_gyro_z_scale: 0.061
+imu_calibration_samples: 100
+turn_left_angle_gain: 1.005
+turn_right_angle_gain: 1.005
+turn_heading_KP: 0.45
+turn_heading_KI: 0
+turn_heading_KD: 0.02
+turn_heading_output_limit_deg: 25
+turn_min_steering_offset_deg: 5
+turn_servo_rate_deg_per_s: 90
+route_turn_compensation_enable: 1
+route_left_turn_forward_compensation_m: 0.30
+route_right_turn_forward_compensation_m: 0.37
+route_min_move_distance_m: 0.03
+obstacle_pause_resume_enable: 1
+obstacle_pause_timeout_seconds: 20
+obstacle_resume_margin_mm: 120
+obstacle_stop_confirm_scans: 2
+obstacle_clear_confirm_scans: 5
+obstacle_min_pause_ms: 500
+status_beep_enable: 1
+beep_gpio: /dev/zf_gpio_beep
+beep_active_level: 1
+
+lidar_serial: /dev/ttyUSB0
+lidar_min_valid_mm: 0
+lidar_self_mask_start_deg: 120
+lidar_self_mask_end_deg: 290
+lidar_self_mask_max_mm: 350
+lidar_stream_port: 2368
+odom_stream_port: 2369
+remote_drive_watchdog_ms: 400
+remote_drive_max_speed_mps: 0.55
+lidar_front_center_deg: 0
+lidar_front_half_width_deg: 30
+lidar_stop_distance_mm: 100
+lidar_slow_distance_mm: 350
+lidar_turn_side_stop_distance_mm: 300
+lidar_turn_side_slow_distance_mm: 550

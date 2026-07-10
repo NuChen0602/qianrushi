@@ -1,0 +1,14 @@
+#!/bin/sh
+
+MODULE=/lib/modules/4.19.190/extra/cp210x.ko
+
+case "$1" in
+    stop)
+        rmmod cp210x 2>/dev/null || true
+        ;;
+    *)
+        if [ -f "$MODULE" ] && ! grep -q '^cp210x ' /proc/modules; then
+            insmod "$MODULE"
+        fi
+        ;;
+esac

@@ -1,0 +1,497 @@
+:root {
+  color-scheme: light;
+  --bg: #eef2f6;
+  --panel: #ffffff;
+  --text: #17202a;
+  --muted: #667789;
+  --line: #d8e0e8;
+  --accent: #1f7a8c;
+  --accent-2: #2f8f5b;
+  --danger: #b3261e;
+  --warn: #9a6700;
+  --shadow: 0 8px 24px rgba(31, 48, 68, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: Inter, "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 76px;
+  padding: 14px 22px;
+  background: #16212d;
+  color: #f7fbff;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.topbar p {
+  margin-top: 6px;
+  color: #b8c7d8;
+  font-size: 13px;
+}
+
+.top-actions,
+.mission-buttons,
+.voice-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid #b8c5d2;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #17202a;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(320px, 0.95fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+.panel {
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-head h2 {
+  font-size: 17px;
+}
+
+.panel-head span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+#map-canvas {
+  display: block;
+  width: 100%;
+  height: min(60vh, 560px);
+  min-height: 360px;
+  background: #f7f9fb;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.legend i {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.robot-dot,
+.goal-dot,
+.point-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.robot-dot { background: var(--accent); }
+.goal-dot { background: #c43a31; }
+.point-dot { background: var(--accent-2); }
+.path-line {
+  width: 20px;
+  height: 3px;
+  background: #d28b25;
+}
+
+.camera-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #111923;
+}
+
+.camera-feed {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #18202a;
+}
+
+#camera-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.camera-box-legend {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.76);
+  color: #f8fafc;
+  font-size: 11px;
+  backdrop-filter: blur(4px);
+}
+
+.camera-box-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.camera-box-legend i {
+  width: 13px;
+  height: 9px;
+  border: 2px solid;
+  border-radius: 2px;
+}
+
+.candidate-box-key { border-color: #facc15 !important; }
+.confirmed-box-key { border-color: #ef4444 !important; }
+
+.mission-buttons {
+  padding: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.mission-buttons button {
+  flex: 1 1 140px;
+}
+
+.voice-buttons {
+  align-items: center;
+  padding: 0 14px 14px;
+}
+
+.voice-buttons span {
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-list {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 10px 12px;
+  padding: 14px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-list dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.order-panel h3 {
+  padding: 12px 14px 0;
+  font-size: 15px;
+}
+
+.events {
+  margin: 0;
+  padding: 10px 14px 14px 34px;
+  max-height: 330px;
+  overflow: auto;
+}
+
+.events li {
+  margin-bottom: 8px;
+  color: #273444;
+  font-size: 13px;
+}
+
+.events .time {
+  color: var(--muted);
+}
+
+.events .error {
+  color: var(--danger);
+}
+
+.events .ok {
+  color: var(--accent-2);
+}
+
+@media (max-width: 1180px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* === voice-only final demo ===
+   摄像头面板只保留标题和画面，隐藏下方所有按钮区
+*/
+.camera-panel button[data-mission],
+.camera-panel button[data-voice],
+.camera-panel [data-mission],
+.camera-panel [data-voice] {
+  display: none !important;
+}
+
+
+/* === final demo map point filter button === */
+.map-panel-with-filter-toggle {
+  position: relative;
+}
+
+.map-point-filter-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 20;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.map-point-filter-toggle:hover {
+  border-color: #94a3b8;
+}
+
+.map-point-filter-toggle.is-compact {
+  background: #ffffff;
+}
+
+
+/* === final demo environment status panel === */
+.env-status-panel {
+  margin: 14px 14px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.env-status-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+
+.env-status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.env-status-item {
+  min-height: 42px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(241, 245, 249, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.env-status-wide {
+  grid-column: span 2;
+}
+
+.env-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.env-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.env-ok {
+  color: #15803d;
+}
+
+
+/* === final demo AI vision model panel === */
+.ai-vision-panel {
+  margin: 12px 14px 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.ai-vision-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ai-vision-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ai-vision-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ai-vision-badge {
+  min-width: 46px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ai-vision-badge.is-running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.ai-vision-badge.is-alert {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.ai-vision-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.ai-vision-flow span {
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+
+.ai-vision-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.ai-vision-item {
+  min-height: 50px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(241, 245, 249, 0.95);
+}
+
+.ai-vision-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 5px;
+}
+
+.ai-vision-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.ai-vision-result {
+  min-height: 34px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.5;
+}

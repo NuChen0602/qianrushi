@@ -1,0 +1,295 @@
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_01_encoder_dir_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_01_encoder_dir_demo/user/build.sh
+index 79bfa050e..347fc9809 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_01_encoder_dir_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_01_encoder_dir_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                                  # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_02_encoder_quad_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_02_encoder_quad_demo/user/build.sh
+index 79bfa050e..347fc9809 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_02_encoder_quad_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E2_encoder/E02_02_encoder_quad_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                                  # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/build.sh
+index 79bfa050e..347fc9809 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                                  # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/main.cpp b/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/main.cpp
+index 954c6ee89..7a34652d4 100644
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/main.cpp
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E3_motor/E03_01_drv8701e_double_motor_control_demo/user/main.cpp
+@@ -128,7 +128,7 @@ int main(int, char**)
+ 
+ 
+     // 创建一个定时器10ms周期，回调函数为pit_callback
+-    pit_timer.init_ms(10, pit_callback);
++    // pit_timer.init_ms(10, pit_callback);
+ 
+     while(1)
+     {
+@@ -152,9 +152,9 @@ int main(int, char**)
+ 
+         if(dir)                                                         // 根据方向判断计数方向 本例程仅作参考
+         {
+-            duty ++;                                                    // 正向计数
+-            if(duty >= MAX_DUTY)                                        // 达到最大值
+-            dir = false;                                                // 变更计数方向
++            duty = MAX_DUTY;                                                    // 正向计数
++            // if(duty >= MAX_DUTY)                                        // 达到最大值
++            // dir = false;                                                // 变更计数方向
+         }
+         else
+         {
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E4_imu/E04_01_imu_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E4_imu/E04_01_imu_demo/user/build.sh
+index 79bfa050e..347fc9809 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E4_imu/E04_01_imu_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E4_imu/E04_01_imu_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                                  # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_01_ips200_display_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_01_ips200_display_demo/user/build.sh
+index 79bfa050e..347fc9809 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_01_ips200_display_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_01_ips200_display_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                                  # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/build.sh
+index 79bfa050e..01939811b 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                    # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/main.cpp b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/main.cpp
+index cb370e4c0..d3157c687 100644
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/main.cpp
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_03_uvc_ips200_display_demo/user/main.cpp
+@@ -70,8 +70,6 @@
+ 
+ zf_device_ips200 ips200;        // 定义2寸IPS SPI屏幕的设备对象，用于屏幕的所有操作
+ zf_device_uvc uvc_dev;          // 定义UVC免驱摄像头的设备对象，用于摄像头的所有操作
+-uint16 count = 0;               // 帧计数变量，用于控制图像显示模式切换的频率
+-uint8  show_flag = 0;           // 显示模式切换标志位：0-显示灰度图像，1-显示RGB彩色图像
+ 
+ /**
+  * @brief 程序主函数，程序入口
+@@ -96,43 +94,16 @@ int main()
+         // 返回值等于0表示成功获取到新的一帧图像数据
+         if(uvc_dev.wait_image_refresh() == 0)
+         {
+-            // 帧计数器累加，达到200帧时执行模式切换
+-            if(count++ >= 200)
++            // 获取摄像头采集到的RGB图像数据缓冲区首地址指针
++            // RGB图像数据格式为uint16位宽（565格式：5位红+6位绿+5位蓝）
++            uint16* rgb_image = uvc_dev.get_rgb_image_ptr();
++            
++            // 判空：确保图像指针有效，避免空指针操作导致程序崩溃
++            if(NULL != rgb_image)
+             {
+-                show_flag = !show_flag;  // 取反切换显示模式：灰度<->彩色
+-                count = 0;               // 计数器清零，重新计数
+-            }
+-
+-            // 根据标志位，交替显示 灰度图像 / RGB彩色图像
+-            // 逻辑：显示200帧灰度图像 → 切换显示200帧彩色图像 → 循环往复
+-            if(show_flag) // 标志位为1，显示RGB彩色图像
+-            {
+-                // 获取摄像头采集到的RGB图像数据缓冲区首地址指针
+-                // RGB图像数据格式为uint16位宽（565格式：5位红+6位绿+5位蓝）
+-                uint16* rgb_image = uvc_dev.get_rgb_image_ptr();
+-                
+-                // 判空：确保图像指针有效，避免空指针操作导致程序崩溃
+-                if(NULL != rgb_image)
+-                {
+-                    // 在屏幕的(0,0)坐标起点，显示RGB图像
+-                    // 显示尺寸为摄像头采集的标准宽高 UVC_WIDTH * UVC_HEIGHT
+-                    ips200.displayimage_rgb565(rgb_image, UVC_WIDTH, UVC_HEIGHT);
+-                }
+-                continue; // 跳过后续灰度显示逻辑，直接进入下一次循环
+-            }
+-            else // 标志位为0，显示灰度图像
+-            {
+-                // 获取摄像头采集到的灰度图像数据缓冲区首地址指针
+-                // 灰度图像数据格式为uint8位宽（0-255表示亮度等级，0最暗，255最亮）
+-                uint8* gray_image = uvc_dev.get_gray_image_ptr();
+-                
+-                // 判空：确保图像指针有效
+-                if(NULL != gray_image)
+-                {
+-                    // 在屏幕的(0,0)坐标起点，显示灰度图像
+-                    // 显示尺寸为摄像头采集的标准宽高 UVC_WIDTH * UVC_HEIGHT
+-                    ips200.displayimage_gray(gray_image, UVC_WIDTH, UVC_HEIGHT);
+-                }
++                // 在屏幕的(0,0)坐标起点，显示RGB图像
++                // 显示尺寸为摄像头采集的标准宽高 UVC_WIDTH * UVC_HEIGHT
++                ips200.displayimage_rgb565(rgb_image, UVC_WIDTH, UVC_HEIGHT);
+             }
+         }
+         // 短延时10毫秒，降低CPU占用率，同时防止循环执行过快导致的资源抢占问题
+@@ -158,4 +129,4 @@ int main()
+ //      无法完成波形测试则复制一个GPIO例程将屏幕所有IO初始化为GPIO翻转电平 看看是否受控
+ //
+ // 问题3：摄像头没找到
+-//      重新插入UVC摄像头，摄像头支持热插拔。
+\ No newline at end of file
++//      重新插入UVC摄像头，摄像头支持热插拔。
+diff --git a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_04_uvc_fps_show_demo/user/build.sh b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_04_uvc_fps_show_demo/user/build.sh
+index 79bfa050e..1d982d6b4 100755
+--- a/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_04_uvc_fps_show_demo/user/build.sh
++++ b/LS2K030x_Library/Example/Motherboard_Demo/E5_display/E05_04_uvc_fps_show_demo/user/build.sh
+@@ -7,7 +7,7 @@ export PATH=/opt/ls_2k0300_env/loongson-gnu-toolchain-8.3-x86_64-loongarch64-lin
+ WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # 脚本所在绝对路径（关键修复）
+ OUT_DIR="${WORK_DIR}/../out"                              # out目录绝对路径
+ USER_DIR="${WORK_DIR}/../user"                            # user目录绝对路径
+-REMOTE_IP="192.168.2.77"                                  # 远程设备IP
++REMOTE_IP="192.168.250.70"                     # 远程设备IP
+ REMOTE_USER="root"                                        # 远程登录用户
+ REMOTE_PATH="/home/root/"                                 # 远程上传路径
+ MAKE_JOBS=$(nproc)                                        # make编译线程数
+diff --git a/linux-4.19-202506/.config b/linux-4.19-202506/.config
+index 513395c36..b94fbee9b 100644
+--- a/linux-4.19-202506/.config
++++ b/linux-4.19-202506/.config
+@@ -3462,7 +3462,7 @@ CONFIG_USB_SERIAL=y
+ # CONFIG_USB_SERIAL_CH9344 is not set
+ # CONFIG_USB_SERIAL_WHITEHEAT is not set
+ # CONFIG_USB_SERIAL_DIGI_ACCELEPORT is not set
+-# CONFIG_USB_SERIAL_CP210X is not set
++CONFIG_USB_SERIAL_CP210X=m
+ # CONFIG_USB_SERIAL_CYPRESS_M8 is not set
+ # CONFIG_USB_SERIAL_EMPEG is not set
+ # CONFIG_USB_SERIAL_FTDI_SIO is not set
+diff --git a/linux-4.19-202506/arch/loongarch/boot/dts/loongson/seekfree_2k0301_coreboard.dts b/linux-4.19-202506/arch/loongarch/boot/dts/loongson/seekfree_2k0301_coreboard.dts
+index ad521b708..569b2f5b8 100755
+--- a/linux-4.19-202506/arch/loongarch/boot/dts/loongson/seekfree_2k0301_coreboard.dts
++++ b/linux-4.19-202506/arch/loongarch/boot/dts/loongson/seekfree_2k0301_coreboard.dts
+@@ -274,44 +274,44 @@
+ // 正交编码器和方向编码器只能二选一使用，不能同时使用
+ // 正交编码器和方向编码器只能二选一使用，不能同时使用
+ // 正交编码器和方向编码器只能二选一使用，不能同时使用
+-&encoder_atim{
+-    status = "okay";
+-    compatible = "seekfree,encoder_quad";
+-    pinctrl-names = "default";
+-    pinctrl-0 = <&atim_ch1_pin_m0>, <&atim_ch2_pin_m0>;   
+-    dev-name = "zf_encoder_quad_1";
+-};
+-
+-&encoder_gtim{
+-    status = "okay";
+-    compatible = "seekfree,encoder_quad";
+-    pinctrl-names = "default";
+-    pinctrl-0 = <&gtim_ch1_pin_m0>, <&gtim_ch2_pin_m0>;   
+-    dev-name = "zf_encoder_quad_2";
+-};
+-// ----------正交编码器配置---------- //
+-
+-// ----------方向编码器配置---------- //
+-// 正交编码器和方向编码器只能二选一使用，不能同时使用
+-// 正交编码器和方向编码器只能二选一使用，不能同时使用
+-// 正交编码器和方向编码器只能二选一使用，不能同时使用
+ // &encoder_atim{
+ //     status = "okay";
+-//     compatible = "seekfree,encoder_dir";
++//     compatible = "seekfree,encoder_quad";
+ //     pinctrl-names = "default";
+-//     pinctrl-0 = <&atim_ch1_pin_m0>;   
+-//     dir-gpios = <&gpa1 13 GPIO_ACTIVE_LOW>;
+-//     dev-name = "zf_encoder_dir_1";
++//     pinctrl-0 = <&atim_ch1_pin_m0>, <&atim_ch2_pin_m0>;
++//     dev-name = "zf_encoder_quad_1";
+ // };
+ 
+ // &encoder_gtim{
+ //     status = "okay";
+-//     compatible = "seekfree,encoder_dir";
++//     compatible = "seekfree,encoder_quad";
+ //     pinctrl-names = "default";
+-//     pinctrl-0 = <&gtim_ch1_pin_m0>;
+-//     dir-gpios = <&gpa2 3 GPIO_ACTIVE_LOW>;
+-//     dev-name = "zf_encoder_dir_2";
++//     pinctrl-0 = <&gtim_ch1_pin_m0>, <&gtim_ch2_pin_m0>;
++//     dev-name = "zf_encoder_quad_2";
+ // };
++// ----------正交编码器配置---------- //
++
++// ----------方向编码器配置---------- //
++// 正交编码器和方向编码器只能二选一使用，不能同时使用
++// 正交编码器和方向编码器只能二选一使用，不能同时使用
++// 正交编码器和方向编码器只能二选一使用，不能同时使用
++&encoder_atim{
++    status = "okay";
++    compatible = "seekfree,encoder_dir";
++    pinctrl-names = "default";
++    pinctrl-0 = <&atim_ch1_pin_m0>;
++    dir-gpios = <&gpa1 13 GPIO_ACTIVE_LOW>;
++    dev-name = "zf_encoder_dir_1";
++};
++
++&encoder_gtim{
++    status = "okay";
++    compatible = "seekfree,encoder_dir";
++    pinctrl-names = "default";
++    pinctrl-0 = <&gtim_ch1_pin_m0>;
++    dir-gpios = <&gpa2 3 GPIO_ACTIVE_LOW>;
++    dev-name = "zf_encoder_dir_2";
++};
+ // ----------方向编码器配置---------- //
+ 
+ // ----------电机PWM配置---------- //
+diff --git a/linux-4.19-202506/seekfree_2k0301_core_board_defconfig b/linux-4.19-202506/seekfree_2k0301_core_board_defconfig
+index 513395c36..b94fbee9b 100644
+--- a/linux-4.19-202506/seekfree_2k0301_core_board_defconfig
++++ b/linux-4.19-202506/seekfree_2k0301_core_board_defconfig
+@@ -3462,7 +3462,7 @@ CONFIG_USB_SERIAL=y
+ # CONFIG_USB_SERIAL_CH9344 is not set
+ # CONFIG_USB_SERIAL_WHITEHEAT is not set
+ # CONFIG_USB_SERIAL_DIGI_ACCELEPORT is not set
+-# CONFIG_USB_SERIAL_CP210X is not set
++CONFIG_USB_SERIAL_CP210X=m
+ # CONFIG_USB_SERIAL_CYPRESS_M8 is not set
+ # CONFIG_USB_SERIAL_EMPEG is not set
+ # CONFIG_USB_SERIAL_FTDI_SIO is not set
+

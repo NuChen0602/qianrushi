@@ -1,0 +1,41 @@
+# Local build output
+/build/
+/install/
+/ros2_ws/build/
+/ros2_ws/install/
+/ros2_ws/log/
+/log/
+**/out/
+*.o
+*.a
+*.so
+*.ko
+*.log
+*.tmp
+
+# Local tools, downloaded references and generated transfer archives
+/.local_tools/
+/.tool_debs/
+/Library_Patrol_Project-main/
+/Double_uvc_test/
+/逐飞科技--乐动雷达D500/
+/serial_chunks/
+/robot_2k0301_board.tar.gz
+/robot_2k0301_board.tar.gz.b64
+
+# Runtime data and local secrets
+/.env
+*.key
+*.pem
+/backend/data/*
+!/backend/data/.gitkeep
+
+# Keep the active map, but not calibration backups
+/maps/*.bak
+/maps/*.rejected
+
+# Editor and Python cache
+/.agents/
+/.codex/
+__pycache__/
+*.py[cod]

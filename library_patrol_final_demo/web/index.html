@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI赋能图书馆微型自主巡检机器人 - 视频演示控制台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>AI赋能图书馆微型自主巡检机器人 - 视频演示控制台</h1>
+      <p id="connection">等待演示服务状态...</p>
+    </div>
+    <div class="top-actions">
+      <button class="danger" data-action="emergency-stop">急停</button>
+      <button data-action="emergency-release">解除急停</button>
+      <button data-action="cancel">取消任务</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel map-panel">
+      <div class="panel-head">
+        <h2>地图与导航</h2>
+        <span id="home-status">起点未记录</span>
+      </div>
+      <canvas id="map-canvas" width="720" height="560"></canvas>
+      <div class="legend">
+        <span><i class="robot-dot"></i> 小车</span>
+        <span><i class="goal-dot"></i> 目标</span>
+        <span><i class="point-dot"></i> 业务点位</span>
+        <span><i class="path-line"></i> 路径</span>
+      </div>
+    </section>
+
+    <section class="panel camera-panel">
+      <div class="panel-head">
+        <h2>摄像头 / 视觉</h2>
+        <span id="camera-stream-status">MJPEG 连接中</span>
+      </div>
+      <div class="camera-stage" id="camera-stage">
+        <img id="camera-feed" class="camera-feed" src="/camera.mjpg" alt="摄像头实时画面">
+        <canvas id="camera-overlay" aria-label="视觉检测框"></canvas>
+        <div class="camera-box-legend">
+          <span><i class="candidate-box-key"></i>本地候选</span>
+          <span><i class="confirmed-box-key"></i>Qwen-VL 已确认</span>
+        </div>
+      </div>
+
+      <div class="env-status-panel">
+        <div class="env-status-title">环境状态</div>
+        <div class="env-status-grid">
+          <div class="env-status-item">
+            <span class="env-label">温度</span>
+            <span class="env-value" id="env-temperature">26.4℃</span>
+          </div>
+          <div class="env-status-item">
+            <span class="env-label">湿度</span>
+            <span class="env-value" id="env-humidity">48%</span>
+          </div>
+          <div class="env-status-item env-status-wide">
+            <span class="env-label">传感器</span>
+            <span class="env-value">DHT11 / P89</span>
+          </div>
+          <div class="env-status-item env-status-wide">
+            <span class="env-label">状态</span>
+            <span class="env-value env-ok" id="env-state">正常</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-vision-panel">
+        <div class="ai-vision-header">
+          <div>
+            <div class="ai-vision-title">AI视觉模型调用</div>
+            <div class="ai-vision-subtitle">实时本地跟踪 → HOG+SVM连续帧确认 → Qwen-VL兜底</div>
+          </div>
+          <div class="ai-vision-badge" id="ai-vision-status">就绪</div>
+        </div>
+
+        <div class="ai-vision-flow">
+          <span>MJPEG</span>
+          <span>→</span>
+          <span>本地候选/跟踪</span>
+          <span>→</span>
+          <span>本地 HOG+SVM</span>
+          <span>→</span>
+          <span>连续3帧确认</span>
+        </div>
+
+        <div class="ai-vision-grid">
+          <div class="ai-vision-item">
+            <div class="ai-vision-label">图书定位</div>
+            <div class="ai-vision-value" id="ai-book-status">本地 ArUco 已接入</div>
+          </div>
+          <div class="ai-vision-item">
+            <div class="ai-vision-label">遗失物检测</div>
+            <div class="ai-vision-value" id="ai-lost-status">等待巡检任务</div>
+          </div>
+          <div class="ai-vision-item">
+            <div class="ai-vision-label">高危场景</div>
+            <div class="ai-vision-value" id="ai-hazard-status">Qwen-VL 待调用</div>
+          </div>
+        </div>
+
+        <div class="ai-vision-result" id="ai-vision-result">
+          最近输出：等待巡检任务触发视觉分析
+        </div>
+      </div>
+
+      <div class="mission-buttons">
+        <button data-mission="RECOMMEND_BOOKS">推荐文学小说</button>
+        <button data-mission="FIND_BOOK">寻找百年孤独</button>
+        <button data-mission="INTRO_BOOK">介绍这本书</button>
+        <button data-mission="SHELF_CHECK">书架错放巡检</button>
+        <button data-mission="LOST_ITEM_PATROL">全图遗失物巡检</button>
+        <button data-mission="HAZARD_CHECK">高危点位检查</button>
+        <button data-mission="RETURN_HOME">返回起点</button>
+      </div>
+      <div class="voice-buttons">
+        <span>调试模拟语音</span>
+        <button data-voice="A2">模拟 A2</button>
+        <button data-voice="A4">模拟 A4</button>
+        <button data-voice="A5">模拟 A5</button>
+        <button data-voice="A6">模拟 A6</button>
+      </div>
+    </section>
+
+    <section class="panel order-panel">
+      <div class="panel-head">
+        <h2>当前任务工单</h2>
+        <span id="orchestrator-state">idle</span>
+      </div>
+      <dl class="status-list">
+        <dt>当前任务</dt><dd id="task">-</dd>
+        <dt>当前阶段</dt><dd id="stage">-</dd>
+        <dt>导航状态</dt><dd id="nav-status">-</dd>
+        <dt>视觉状态</dt><dd id="vision-status">-</dd>
+        <dt>语音状态</dt><dd id="voice-status">-</dd>
+        <dt>检测结果</dt><dd id="result">-</dd>
+        <dt>错误状态</dt><dd id="error">-</dd>
+      </dl>
+      <h3>最近事件</h3>
+      <ol id="events" class="events"></ol>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

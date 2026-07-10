@@ -1,0 +1,56 @@
+nodes:
+  - id: START
+    type: start
+    label: 起点
+    marker: START
+
+  - id: A1
+    type: bookshelf
+    label: A 区 1 号书架
+    marker: A1
+
+  - id: A2
+    type: bookshelf
+    label: A 区 2 号书架
+    marker: A2
+
+  - id: SOCKET
+    type: socket
+    label: 插座巡检区
+    marker: SOCKET
+
+  - id: ENV
+    type: environment
+    label: 环境采样区
+    marker: ENV
+
+  - id: DESK
+    type: desk
+    label: 阅览桌椅区
+    marker: DESK
+
+edges:
+  - from: START
+    to: A1
+    cost: 1.0
+
+  - from: A1
+    to: A2
+    cost: 1.0
+
+  - from: A2
+    to: SOCKET
+    cost: 1.0
+
+  - from: SOCKET
+    to: ENV
+    cost: 1.0
+
+  - from: ENV
+    to: DESK
+    cost: 1.0
+
+  - from: DESK
+    to: START
+    cost: 1.0
+

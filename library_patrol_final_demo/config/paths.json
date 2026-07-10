@@ -1,0 +1,38 @@
+{
+  "project_root": "~/Library_Patrol_Project",
+  "nav_project": "~/Library_Patrol_Project/robot_2k03011/robot_2k0301",
+  "vision_project": "~/Library_Patrol_Project/LS2K0301_Library/LS2K030x_Library/Example/Motherboard_Demo/E8_camera/E08_04_shelf_book_vision_demo",
+  "board": {
+    "ip": "192.168.43.192",
+    "ssh_user": "root"
+  },
+  "navigation": {
+    "dashboard_url": "http://127.0.0.1:8080",
+    "map_api": "/api/map",
+    "state_api": "/api/state",
+    "goal_api": "/api/goal",
+    "patrol_api": "/api/patrol/start",
+    "cancel_api": "/api/cancel",
+    "emergency_stop_api": "/api/emergency-stop",
+    "emergency_release_api": "/api/emergency-release"
+  },
+  "demo_web": {
+    "host": "0.0.0.0",
+    "port": 8090
+  },
+  "camera": {
+    "board_host": "192.168.43.192",
+    "board_port": 5000,
+    "mjpeg_fps": 12,
+    "enabled": true
+  },
+  "vision": {
+    "lost_item_api_url": "http://127.0.0.1:8091/api/vision/lost_items"
+  },
+  "voice": {
+    "enabled": false,
+    "mode": "disabled",
+    "serial_port": "/dev/ttyS1",
+    "baudrate": 115200
+  }
+}

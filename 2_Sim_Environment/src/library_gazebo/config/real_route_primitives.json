@@ -1,0 +1,22 @@
+{
+  "default_goal": [
+    {"cmd": "MOVE forward 30", "wait_sec": 4.0}
+  ],
+  "areas": {
+    "area_a": [
+      {"cmd": "MOVE forward 35", "wait_sec": 4.0}
+    ],
+    "study_socket_zone": [
+      {"cmd": "TURN right 16", "wait_sec": 3.0},
+      {"cmd": "MOVE forward 30", "wait_sec": 4.0}
+    ],
+    "lost_found_scan_lane": [
+      {"cmd": "TURN left 16", "wait_sec": 3.0},
+      {"cmd": "MOVE forward 30", "wait_sec": 4.0}
+    ],
+    "area_b": [
+      {"cmd": "TURN left 16", "wait_sec": 3.0},
+      {"cmd": "MOVE forward 35", "wait_sec": 4.0}
+    ]
+  }
+}

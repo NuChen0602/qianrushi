@@ -1,0 +1,37 @@
+robot_odometry_tcp_bridge:
+  ros__parameters:
+    host: 192.168.123.70
+    port: 2369
+    counts_per_meter: 13738.4
+    left_counts_per_meter: 13781.0
+    right_counts_per_meter: 13696.0
+    max_counts_per_packet: 2000
+    # The IMU positive Z axis points down relative to ROS base_link, so its
+    # clockwise-positive yaw rate must be inverted to ROS counter-clockwise.
+    gyro_z_sign: -1.0
+    gyro_deadband_dps: 0.1
+    socket_timeout_sec: 2.0
+    reconnect_delay_sec: 1.0
+    min_dt: 0.005
+    max_dt: 0.1
+    max_linear_speed_mps: 3.0
+    max_angular_speed_rps: 8.0
+    require_imu_ready: true
+    stats_period_sec: 5.0
+    odom_frame: odom
+    base_frame: base_link
+    laser_frame: base_laser
+    # LiDAR is mounted at the chassis center.
+    laser_x: 0.0
+    laser_y: 0.0
+    laser_yaw: 0.0
+
+    # Replace these preliminary values with physical measurements. Commands
+    # are normalized steering requests; wheel angles are relative to chassis.
+    wheelbase_m: 0.18
+    steering_command_points: [-1.0, -0.5, 0.0, 0.5, 1.0]
+    steering_servo_deg_points: [80.0, 87.5, 95.0, 110.0, 125.0]
+    steering_wheel_deg_points: [-28.0, -14.0, 0.0, 14.0, 28.0]
+    drive_status_topic: /drive/status
+    drive_status_period_sec: 0.1
+    max_servo_rate_deg_per_sec: 75.0

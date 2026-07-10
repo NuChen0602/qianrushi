@@ -1,0 +1,21 @@
+tasks:
+  full_inspection:
+    name: 全区域巡检
+    path: [START, A1, A2, SOCKET, ENV, DESK, START]
+
+  socket_inspection:
+    name: 插座巡检
+    target_node: SOCKET
+
+  environment_sample:
+    name: 环境采样
+    target_node: ENV
+
+  lost_item_scan:
+    name: 失物扫描
+    target_node: DESK
+
+  guide_robot_vision_books:
+    name: 查找机器人视觉相关书籍
+    target_node: A2
+

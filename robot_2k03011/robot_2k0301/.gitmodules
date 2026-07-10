@@ -1,0 +1,4 @@
+[submodule "third_party/LS2K0301_Library"]
+	path = third_party/LS2K0301_Library
+	url = https://github.com/NuChen0602/qianrushi.git
+	branch = ls2k0301-library

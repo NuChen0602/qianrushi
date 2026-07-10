@@ -1,0 +1,113 @@
+<?xml version="1.0" ?>
+<robot name="patrol_robot">
+
+  <link name="base_link">
+    <visual><geometry><box size="0.3 0.2 0.1"/></geometry><material name="gray"><color rgba="0.5 0.5 0.5 1.0"/></material></visual>
+    <collision><geometry><box size="0.3 0.2 0.1"/></geometry></collision>
+    <inertial><mass value="2.0"/><inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/></inertial>
+  </link>
+
+  <link name="left_wheel">
+    <visual><geometry><cylinder radius="0.05" length="0.04"/></geometry><material name="black"><color rgba="0 0 0 1.0"/></material></visual>
+    <collision><geometry><cylinder radius="0.05" length="0.04"/></geometry></collision>
+    <inertial><mass value="0.2"/><inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/></inertial>
+  </link>
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="-0.05 0.12 -0.05" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="right_wheel">
+    <visual><geometry><cylinder radius="0.05" length="0.04"/></geometry><material name="black"><color rgba="0 0 0 1.0"/></material></visual>
+    <collision><geometry><cylinder radius="0.05" length="0.04"/></geometry></collision>
+    <inertial><mass value="0.2"/><inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/></inertial>
+  </link>
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="-0.05 -0.12 -0.05" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="caster_wheel">
+    <collision><geometry><sphere radius="0.049"/></geometry></collision>
+    <visual><geometry><sphere radius="0.049"/></geometry></visual>
+    <inertial><mass value="0.1"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
+  </link>
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_wheel"/>
+    <origin xyz="0.1 0 -0.05" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+    <visual><geometry><box size="0.02 0.05 0.02"/></geometry><material name="black"><color rgba="0 0 0 1.0"/></material></visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.15 0 0.05" rpy="0 0.5 0"/> 
+  </joint>
+
+  <gazebo reference="camera_link">
+    <sensor type="camera" name="low_angle_camera">
+      <update_rate>30.0</update_rate>
+      <camera name="head">
+        <image><width>320</width><height>240</height><format>R8G8B8</format></image>
+        <clip><near>0.02</near><far>5.0</far></clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros><argument>image_raw:=/camera/image_raw</argument></ros>
+        <camera_name>low_angle_camera</camera_name>
+        <frame_name>camera_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <ros><argument>cmd_vel:=/cmd_vel</argument><argument>odom:=/odom</argument></ros>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.24</wheel_separation>
+      <wheel_diameter>0.1</wheel_diameter>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+      <max_wheel_torque>20</max_wheel_torque>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+    </plugin>
+    
+  </gazebo>
+  <gazebo reference="caster_wheel">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <link name="lidar_link">
+    <visual><geometry><cylinder radius="0.04" length="0.02"/></geometry><material name="blue"><color rgba="0 0 1 1.0"/></material></visual>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar">
+      <always_on>true</always_on>
+      <update_rate>10.0</update_rate>
+      <ray>
+        <scan><horizontal><samples>360</samples><resolution>1.0</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal></scan>
+        <range><min>0.15</min><max>12.0</max></range>
+      </ray>
+      <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+        <ros><remapping>~/out:=scan</remapping></ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>lidar_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+</robot>

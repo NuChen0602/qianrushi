@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图书馆巡检小车控制台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="brand">
+        <div class="brand-mark">LR</div>
+        <div>
+          <h1>图书馆巡检小车</h1>
+          <p>Navigation Console</p>
+        </div>
+      </div>
+
+      <nav class="rail-nav" aria-label="地图操作模式">
+        <button type="button" data-mode="goal" class="mode active">
+          <span class="nav-icon target-icon"></span>
+          <span>目标点</span>
+        </button>
+        <button type="button" data-mode="initial" class="mode">
+          <span class="nav-icon pose-icon"></span>
+          <span>初始位姿</span>
+        </button>
+        <button type="button" data-mode="waypoint" class="mode">
+          <span class="nav-icon route-icon"></span>
+          <span>巡检点</span>
+        </button>
+      </nav>
+
+      <section class="connection-block">
+        <h2>链路状态</h2>
+        <div class="health-list">
+          <span id="robotHealth" class="health off">定位</span>
+          <span id="lidarHealth" class="health off">雷达</span>
+          <span id="plannerHealth" class="health idle">规划器</span>
+          <span id="navHealth" class="health idle">导航</span>
+        </div>
+      </section>
+
+      <div class="rail-footer">
+        <span id="systemUptime">00:00:00</span>
+        <span id="mapInfo">等待地图</span>
+      </div>
+    </aside>
+
+    <main class="main-screen">
+      <header class="commandbar">
+        <div>
+          <p class="eyebrow">巡检任务</p>
+          <h2 id="missionTitle">固定地图目标点导航</h2>
+        </div>
+        <div class="command-actions">
+          <button type="button" id="fitMap" class="icon-button" title="适配地图">
+            <span class="button-icon fit-icon"></span>
+            <span>适配</span>
+          </button>
+          <button type="button" id="cancelNav" class="icon-button" title="取消任务">
+            <span class="button-icon stop-icon"></span>
+            <span>取消</span>
+          </button>
+          <button type="button" id="emergencyStop" class="icon-button danger" title="急停">
+            <span class="button-icon alert-icon"></span>
+            <span>急停</span>
+          </button>
+          <button type="button" id="emergencyRelease" class="icon-button secondary" title="解除急停">
+            <span class="button-icon release-icon"></span>
+            <span>恢复</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="map-console">
+        <div id="mapStage" class="map-stage">
+          <canvas id="mapCanvas"></canvas>
+          <div id="mapEmpty" class="map-empty">等待地图数据</div>
+
+          <div class="map-hud mode-hud">
+            <span class="hud-label">当前模式</span>
+            <strong id="activeModeText">目标点</strong>
+          </div>
+
+          <div class="map-hud cursor-hud">
+            <span id="cursorPosition">x 0.00 · y 0.00</span>
+          </div>
+
+          <div class="map-hud legend">
+            <span><i class="swatch obstacle"></i>书架/墙体</span>
+            <span><i class="swatch scan"></i>实时雷达</span>
+            <span><i class="swatch path"></i>规划路径</span>
+            <span><i class="swatch robot"></i>小车</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="inspector">
+      <section class="panel mission-panel">
+        <div class="section-heading">
+          <div>
+            <h2>当前任务</h2>
+            <p id="navStateText">启动中</p>
+          </div>
+          <span id="patrolState" class="state-pill">空闲</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div class="mission-lines">
+          <span id="goalSummary">未设置目标</span>
+          <span id="plannerDetail">规划器等待中</span>
+          <span id="navigationDetail">导航等待中</span>
+        </div>
+      </section>
+
+      <section class="panel metrics">
+        <div class="section-heading compact-heading">
+          <h2>实时状态</h2>
+          <span id="progressText">--</span>
+        </div>
+        <dl>
+          <div><dt>位置 X</dt><dd id="poseX">--</dd></div>
+          <div><dt>位置 Y</dt><dd id="poseY">--</dd></div>
+          <div><dt>航向</dt><dd id="poseYaw">--</dd></div>
+          <div><dt>剩余距离</dt><dd id="remaining">--</dd></div>
+          <div><dt>定位质量</dt><dd id="localizationQuality">--</dd></div>
+          <div><dt>动态障碍</dt><dd id="dynamicObstacles">0</dd></div>
+          <div><dt>行驶速度</dt><dd id="driveSpeed">--</dd></div>
+          <div><dt>舵机角度</dt><dd id="servoAngle">--</dd></div>
+          <div><dt>前轮角度</dt><dd id="wheelAngle">--</dd></div>
+          <div><dt>转弯半径</dt><dd id="turnRadius">--</dd></div>
+          <div><dt>路径点</dt><dd id="pathCount">0</dd></div>
+          <div><dt>雷达点</dt><dd id="scanCount">0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel patrol-section">
+        <div class="section-heading compact-heading">
+          <h2>巡检队列</h2>
+          <button type="button" id="clearWaypoints" class="text-button">清空</button>
+        </div>
+        <ol id="waypointList" class="waypoint-list"></ol>
+        <label class="toggle-row">
+          <input type="checkbox" id="repeatPatrol">
+          <span>循环巡检</span>
+        </label>
+        <div class="button-row">
+          <button type="button" id="startPatrol" class="primary">开始巡检</button>
+          <button type="button" id="cancelPatrol">停止巡检</button>
+        </div>
+      </section>
+
+      <section class="panel event-section">
+        <div class="section-heading compact-heading">
+          <h2>运行日志</h2>
+          <span id="eventCount">0</span>
+        </div>
+        <div id="eventLog" class="event-log"></div>
+      </section>
+    </aside>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
