@@ -25,10 +25,10 @@ speed_dif_p: 0
 left_speed_min_pwm: 2500
 right_speed_min_pwm: 2500
 
-left_motor_pwm: /dev/zf_pwm_motor_1
-right_motor_pwm: /dev/zf_pwm_motor_2
-left_motor_dir: /dev/zf_gpio_motor_1
-right_motor_dir: /dev/zf_gpio_motor_2
+left_motor_pwm: /dev/zf_pwm_motor_2
+right_motor_pwm: /dev/zf_pwm_motor_1
+left_motor_dir: /dev/zf_gpio_motor_2
+right_motor_dir: /dev/zf_gpio_motor_1
 left_motor_forward_dir: 0
 right_motor_forward_dir: 0
 

@@ -57,6 +57,11 @@ public:
         int timeout_seconds,
         bool allow_initial_front_obstacle = false,
         LidarMonitorState* shared_lidar_state = nullptr);
+    bool runBoardNavigation(
+        const std::string& map_yaml,
+        double start_x, double start_y, double start_yaw,
+        double goal_x, double goal_y, double goal_yaw,
+        int timeout_seconds);
 
     void motor_speed_loop(int big_state, double offset = 0.0);
     void motor_stop();

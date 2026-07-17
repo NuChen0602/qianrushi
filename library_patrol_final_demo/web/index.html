@@ -28,6 +28,7 @@
       <canvas id="map-canvas" width="720" height="560"></canvas>
       <div class="legend">
         <span><i class="robot-dot"></i> 小车</span>
+        <span><i class="scan-dot"></i> 激光雷达</span>
         <span><i class="goal-dot"></i> 目标</span>
         <span><i class="point-dot"></i> 业务点位</span>
         <span><i class="path-line"></i> 路径</span>
@@ -37,14 +38,15 @@
     <section class="panel camera-panel">
       <div class="panel-head">
         <h2>摄像头 / 视觉</h2>
-        <span id="camera-stream-status">MJPEG 连接中</span>
+        <span id="camera-stream-status">摄像头连接中</span>
       </div>
       <div class="camera-stage" id="camera-stage">
-        <img id="camera-feed" class="camera-feed" src="/camera.mjpg" alt="摄像头实时画面">
+        <img id="camera-feed" class="camera-feed" src="/camera.jpg?t=0" alt="摄像头实时画面">
         <canvas id="camera-overlay" aria-label="视觉检测框"></canvas>
         <div class="camera-box-legend">
+          <span><i class="aruco-box-key"></i>ArUco 书本</span>
           <span><i class="candidate-box-key"></i>本地候选</span>
-          <span><i class="confirmed-box-key"></i>Qwen-VL 已确认</span>
+          <span><i class="confirmed-box-key"></i>目标 / 已确认</span>
         </div>
       </div>
 
@@ -60,8 +62,8 @@
             <span class="env-value" id="env-humidity">48%</span>
           </div>
           <div class="env-status-item env-status-wide">
-            <span class="env-label">传感器</span>
-            <span class="env-value">DHT11 / P89</span>
+            <span class="env-label">烟雾</span>
+            <span class="env-value" id="env-smoke">MQ-2 / A3 等待采样</span>
           </div>
           <div class="env-status-item env-status-wide">
             <span class="env-label">状态</span>

@@ -67,6 +67,8 @@ class CameraProxy:
         with self._frame_ready:
             self._running = False
             self._frame_ready.notify_all()
+        if self._thread:
+            self._thread.join(timeout=self.timeout_sec + 1.0)
 
     @staticmethod
     def _read_exact(sock, size):

@@ -3,7 +3,7 @@ set -eo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROS_WS="${PROJECT_ROOT}/ros2_ws"
-BOARD_IP="${BOARD_IP:-192.168.123.70}"
+BOARD_IP="${BOARD_IP:-192.168.43.192}"
 BOARD_DIR="/home/root/robot_2k0301"
 LIDAR_PORT="${LIDAR_PORT:-2368}"
 ODOM_PORT="${ODOM_PORT:-2369}"
@@ -17,6 +17,8 @@ ENABLE_IPS200_DISPLAY="${ENABLE_IPS200_DISPLAY:-true}"
 IPS200_DISPLAY_APP="${IPS200_DISPLAY_APP:-/home/root/E05_01_ips200_display_demo}"
 IPS200_DISPLAY_BIN="$(basename "${IPS200_DISPLAY_APP}")"
 IPS200_MAP_PORT="${IPS200_MAP_PORT:-2370}"
+ENABLE_AUTONOMOUS_EXPLORATION="${ENABLE_AUTONOMOUS_EXPLORATION:-false}"
+EXPLORATION_RADIUS_M="${EXPLORATION_RADIUS_M:-2.0}"
 
 if [[ "${ODOM_MODE}" != "odom-stream" && "${ODOM_MODE}" != "mapping-drive" ]]; then
     echo "ODOM_MODE must be odom-stream or mapping-drive"
@@ -77,4 +79,6 @@ exec ros2 launch robot_lidar_bridge mapping.launch.py \
     obstacle_stop_distance_m:="${OBSTACLE_STOP_DISTANCE_M}" \
     obstacle_slow_distance_m:="${OBSTACLE_SLOW_DISTANCE_M}" \
     enable_ips200_map_display:="${ENABLE_IPS200_DISPLAY}" \
-    ips200_map_port:="${IPS200_MAP_PORT}"
+    ips200_map_port:="${IPS200_MAP_PORT}" \
+    enable_autonomous_exploration:="${ENABLE_AUTONOMOUS_EXPLORATION}" \
+    exploration_radius_m:="${EXPLORATION_RADIUS_M}"

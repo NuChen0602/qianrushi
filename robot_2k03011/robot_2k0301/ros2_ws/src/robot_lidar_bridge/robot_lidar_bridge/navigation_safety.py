@@ -50,6 +50,7 @@ class NavigationSafety(Node):
             'obstacle_status_topic', '/navigation/obstacle_status')
         self.declare_parameter(
             'path_blocked_topic', '/navigation/path_blocked')
+        self.declare_parameter('enable_dynamic_obstacle_layer', True)
         self.declare_parameter('publish_rate_hz', 5.0)
         self.declare_parameter('scan_stride', 2)
         self.declare_parameter('dynamic_obstacle_ttl_sec', 2.0)
@@ -60,6 +61,10 @@ class NavigationSafety(Node):
         self.declare_parameter('min_dynamic_range_m', 0.12)
         self.declare_parameter('max_dynamic_range_m', 2.5)
         self.declare_parameter('occupied_threshold', 65)
+        self.declare_parameter('clear_robot_unknown_footprint', True)
+        self.declare_parameter('vehicle_length_m', 0.26)
+        self.declare_parameter('vehicle_width_m', 0.135)
+        self.declare_parameter('footprint_clearance_margin_m', 0.02)
         self.declare_parameter('block_confirm_samples', 2)
         self.declare_parameter('clear_confirm_samples', 2)
         self.declare_parameter('localization_good_samples', 3)
@@ -76,6 +81,8 @@ class NavigationSafety(Node):
 
         self.map_frame = str(self.get_parameter('map_frame').value)
         self.base_frame = str(self.get_parameter('base_frame').value)
+        self.enable_dynamic_obstacle_layer = bool(
+            self.get_parameter('enable_dynamic_obstacle_layer').value)
         self.scan_stride = max(
             int(self.get_parameter('scan_stride').value), 1)
         self.dynamic_obstacle_ttl_sec = max(
@@ -95,6 +102,14 @@ class NavigationSafety(Node):
             self.min_dynamic_range_m)
         self.occupied_threshold = int(
             self.get_parameter('occupied_threshold').value)
+        self.clear_robot_unknown_footprint = bool(
+            self.get_parameter('clear_robot_unknown_footprint').value)
+        self.vehicle_length_m = max(
+            float(self.get_parameter('vehicle_length_m').value), 0.01)
+        self.vehicle_width_m = max(
+            float(self.get_parameter('vehicle_width_m').value), 0.01)
+        self.footprint_clearance_margin_m = max(
+            float(self.get_parameter('footprint_clearance_margin_m').value), 0.0)
         self.block_confirm_samples = max(
             int(self.get_parameter('block_confirm_samples').value), 1)
         self.clear_confirm_samples = max(
@@ -195,9 +210,11 @@ class NavigationSafety(Node):
         self.clear_count = 0
         self.last_obstacle_state = ''
 
+        dynamic_layer = (
+            'enabled' if self.enable_dynamic_obstacle_layer else 'disabled')
         self.get_logger().info(
-            'navigation safety ready: dynamic obstacle layer and '
-            'AMCL quality gate enabled')
+            f'navigation safety ready: dynamic obstacle layer {dynamic_layer}; '
+            'localization quality gate enabled')
 
     def map_callback(self, message):
         origin = message.info.origin
@@ -221,7 +238,8 @@ class NavigationSafety(Node):
     def scan_callback(self, message):
         now = time.monotonic()
         self.last_scan_time = now
-        if self.static_grid is None:
+        if (not self.enable_dynamic_obstacle_layer or
+                self.static_grid is None):
             return
         try:
             transform = self.tf_buffer.lookup_transform(
@@ -252,6 +270,9 @@ class NavigationSafety(Node):
             angle += message.angle_increment
 
     def path_callback(self, message):
+        if not self.enable_dynamic_obstacle_layer:
+            self.path_points = []
+            return
         self.path_points = [
             (pose.pose.position.x, pose.pose.position.y)
             for pose in message.poses
@@ -265,6 +286,9 @@ class NavigationSafety(Node):
         self.last_odom_time = time.monotonic()
 
     def active_dynamic_points(self, now):
+        if not self.enable_dynamic_obstacle_layer:
+            self.dynamic_cells.clear()
+            return []
         expired = [
             cell for cell, expiry in self.dynamic_cells.items()
             if expiry <= now
@@ -295,9 +319,45 @@ class NavigationSafety(Node):
         output = copy.deepcopy(self.base_map_message)
         output.header.stamp = self.get_clock().now().to_msg()
         output.header.frame_id = self.map_frame
-        output.data = self.static_grid.inflated_data(
+        data = self.static_grid.inflated_data(
             active_cells, self.dynamic_inflation_radius_m)
+        if self.clear_robot_unknown_footprint:
+            try:
+                transform = self.tf_buffer.lookup_transform(
+                    self.map_frame, self.base_frame, rclpy.time.Time())
+                translation = transform.transform.translation
+                yaw = yaw_from_quaternion(transform.transform.rotation)
+                self.clear_unknown_robot_footprint(
+                    data, translation.x, translation.y, yaw)
+            except TransformException:
+                pass
+        output.data = data
         self.planning_map_pub.publish(output)
+
+    def clear_unknown_robot_footprint(self, data, robot_x, robot_y, yaw):
+        """Clear only unknown cells physically occupied by the robot itself."""
+        spec = self.static_grid.spec
+        half_length = self.vehicle_length_m * 0.5 + self.footprint_clearance_margin_m
+        half_width = self.vehicle_width_m * 0.5 + self.footprint_clearance_margin_m
+        radius = math.hypot(half_length, half_width)
+        center_x, center_y = spec.world_to_grid(robot_x, robot_y)
+        cells = math.ceil(radius / spec.resolution) + 1
+        cosine = math.cos(yaw)
+        sine = math.sin(yaw)
+        for gy in range(center_y - cells, center_y + cells + 1):
+            for gx in range(center_x - cells, center_x + cells + 1):
+                if not spec.contains(gx, gy):
+                    continue
+                index = gy * spec.width + gx
+                if data[index] != -1:
+                    continue
+                wx, wy = spec.grid_to_world(gx, gy)
+                dx = wx - robot_x
+                dy = wy - robot_y
+                local_x = cosine * dx + sine * dy
+                local_y = -sine * dx + cosine * dy
+                if abs(local_x) <= half_length and abs(local_y) <= half_width:
+                    data[index] = 0
 
     def update_localization(self, now):
         covariance = self.amcl_covariance or ()
@@ -354,6 +414,28 @@ class NavigationSafety(Node):
             self.last_localization_state = state_key
 
     def update_obstacles(self, now, dynamic_points):
+        if not self.enable_dynamic_obstacle_layer:
+            self.path_blocked = False
+            self.blocked_count = 0
+            self.clear_count = 0
+            bool_message = Bool()
+            bool_message.data = False
+            self.path_blocked_pub.publish(bool_message)
+            payload = {
+                'state': 'disabled',
+                'blocked': False,
+                'dynamic_points': 0,
+                'blocking_points': 0,
+                'nearest_path_m': None,
+                'ttl_sec': 0.0,
+            }
+            self.publish_json(self.obstacle_status_pub, payload)
+            if payload['state'] != self.last_obstacle_state:
+                self.get_logger().info(
+                    'dynamic lidar obstacle avoidance disabled')
+                self.last_obstacle_state = payload['state']
+            return
+
         blocked = False
         nearest_path = math.inf
         blocking_points = 0

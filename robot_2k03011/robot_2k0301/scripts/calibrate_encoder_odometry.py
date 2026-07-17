@@ -7,7 +7,7 @@ import socket
 def main():
     parser = argparse.ArgumentParser(
         description='Accumulate wheel encoder counts over a measured straight distance.')
-    parser.add_argument('--host', default='192.168.123.70')
+    parser.add_argument('--host', default='192.168.43.192')
     parser.add_argument('--port', type=int, default=2369)
     parser.add_argument('--distance', type=float, required=True, help='Measured distance in meters')
     args = parser.parse_args()

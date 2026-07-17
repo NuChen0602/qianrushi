@@ -15,6 +15,7 @@ from robot_lidar_bridge.motion_control import (
     SmoothSpeedLimiter,
     curvature_steering_command,
     curvature_speed_limit,
+    forward_lateral_displacement,
     peak_path_curvature,
     signed_path_curvature,
 )
@@ -54,6 +55,7 @@ class GoalNavigator(Node):
             'path_blocked_topic', '/navigation/path_blocked')
         self.declare_parameter(
             'obstacle_status_topic', '/navigation/obstacle_status')
+        self.declare_parameter('enable_lidar_obstacle_avoidance', True)
         self.declare_parameter('cancel_topic', '/navigation/cancel')
         self.declare_parameter(
             'emergency_stop_topic', '/navigation/emergency_stop')
@@ -61,6 +63,9 @@ class GoalNavigator(Node):
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('goal_tolerance_m', 0.10)
         self.declare_parameter('goal_yaw_tolerance_deg', 10.0)
+        self.declare_parameter('final_forward_distance_m', 0.05)
+        self.declare_parameter('final_forward_speed_mps', 0.04)
+        self.declare_parameter('final_forward_timeout_sec', 4.0)
         self.declare_parameter('final_yaw_control_radius_m', 0.18)
         self.declare_parameter('max_speed_mps', 0.18)
         self.declare_parameter('min_speed_mps', 0.08)
@@ -109,6 +114,8 @@ class GoalNavigator(Node):
 
         self.map_frame = str(self.get_parameter('map_frame').value)
         self.base_frame = str(self.get_parameter('base_frame').value)
+        self.enable_lidar_obstacle_avoidance = bool(
+            self.get_parameter('enable_lidar_obstacle_avoidance').value)
         self.goal_tolerance_m = max(
             float(self.get_parameter('goal_tolerance_m').value), 0.02)
         self.goal_yaw_tolerance_rad = math.radians(max(
@@ -118,6 +125,14 @@ class GoalNavigator(Node):
             self.goal_tolerance_m)
         self.max_speed_mps = max(
             float(self.get_parameter('max_speed_mps').value), 0.01)
+        self.final_forward_distance_m = max(
+            float(self.get_parameter('final_forward_distance_m').value), 0.0)
+        self.final_forward_speed_mps = clamp(
+            float(self.get_parameter('final_forward_speed_mps').value),
+            0.01, self.max_speed_mps)
+        self.final_forward_timeout_sec = max(
+            float(self.get_parameter('final_forward_timeout_sec').value),
+            1.0)
         self.min_speed_mps = clamp(
             float(self.get_parameter('min_speed_mps').value),
             0.0,
@@ -315,6 +330,8 @@ class GoalNavigator(Node):
         self.motion_direction = 0
         self.emergency_stopped = False
         self.active_goal = None
+        self.final_forward_start_pose = None
+        self.final_forward_started_at = 0.0
         self.last_replan_time = 0.0
         self.last_status_state = ''
         self.planner_status = {'state': 'starting'}
@@ -382,6 +399,7 @@ class GoalNavigator(Node):
         if (message.header.frame_id and
                 message.header.frame_id != self.map_frame):
             return
+        self.reset_final_forward()
         self.active_goal = (
             float(message.pose.position.x),
             float(message.pose.position.y),
@@ -451,6 +469,7 @@ class GoalNavigator(Node):
 
     def cancel_callback(self, _message):
         self.active_goal = None
+        self.reset_final_forward()
         self.reset_recovery()
         self.clear_path()
         self.publish_status('cancelled')
@@ -459,6 +478,7 @@ class GoalNavigator(Node):
     def emergency_stop_callback(self, message):
         self.emergency_stopped = bool(message.data)
         self.active_goal = None
+        self.reset_final_forward()
         self.reset_recovery()
         self.clear_path()
         if self.emergency_stopped:
@@ -476,6 +496,10 @@ class GoalNavigator(Node):
         self.steering_command = 0.0
 
     def path_callback(self, message):
+        if self.final_forward_active():
+            self.get_logger().debug(
+                'ignoring path update during final forward approach')
+            return
         if (message.header.frame_id and
                 message.header.frame_id != self.map_frame):
             self.get_logger().error(
@@ -717,10 +741,95 @@ class GoalNavigator(Node):
         self.reset_heading_pid()
         self.publish_stop()
 
+    def final_forward_active(self):
+        return self.final_forward_start_pose is not None
+
+    def reset_final_forward(self):
+        self.final_forward_start_pose = None
+        self.final_forward_started_at = 0.0
+
+    def start_final_forward(self, x, y, yaw, now):
+        """Start the measured 5 cm straight-ahead segment after a true goal."""
+        self.clear_path()
+        self.final_forward_start_pose = (float(x), float(y), float(yaw))
+        self.final_forward_started_at = float(now)
+        goal = self.active_goal
+        fields = {
+            'forward_target_m': self.final_forward_distance_m,
+            'forward_progress_m': 0.0,
+            'forward_speed_mps': self.final_forward_speed_mps,
+        }
+        if goal is not None:
+            fields['goal'] = {'x': goal[0], 'y': goal[1], 'yaw': goal[2]}
+        self.publish_status('final_forward', **fields)
+        self.get_logger().info(
+            f'goal reached; driving straight ahead '
+            f'{self.final_forward_distance_m:.3f}m')
+
+    def complete_final_forward(self, progress, lateral):
+        reached_goal = self.active_goal
+        self.active_goal = None
+        self.reset_final_forward()
+        self.publish_stop()
+        fields = {
+            'forward_target_m': self.final_forward_distance_m,
+            'forward_progress_m': progress,
+            'forward_lateral_error_m': lateral,
+        }
+        if reached_goal is not None:
+            fields['goal'] = {
+                'x': reached_goal[0],
+                'y': reached_goal[1],
+                'yaw': reached_goal[2],
+            }
+        self.publish_status('reached', **fields)
+        self.reset_recovery()
+        self.get_logger().info(
+            f'final forward complete: progress={progress:.3f}m '
+            f'lateral={lateral:.3f}m')
+
+    def control_final_forward(self, x, y, _yaw, now):
+        start_x, start_y, start_yaw = self.final_forward_start_pose
+        progress, lateral = forward_lateral_displacement(
+            start_x, start_y, start_yaw, x, y)
+        if progress >= self.final_forward_distance_m:
+            self.complete_final_forward(progress, lateral)
+            return
+
+        elapsed = now - self.final_forward_started_at
+        if elapsed >= self.final_forward_timeout_sec:
+            self.fail_navigation(
+                'final_forward_timeout',
+                forward_target_m=self.final_forward_distance_m,
+                forward_progress_m=progress,
+                forward_lateral_error_m=lateral,
+                elapsed_sec=elapsed)
+            return
+
+        remaining = max(0.0, self.final_forward_distance_m - progress)
+        braking_speed = math.sqrt(
+            2.0 * self.max_deceleration_mps2 * remaining)
+        target_speed = min(self.final_forward_speed_mps, braking_speed)
+        command = Twist()
+        command.linear.x = self.update_speed_command(target_speed, now)
+        command.angular.z = 0.0
+        self.cmd_pub.publish(command)
+        if now - self.last_status_time >= self.status_period_sec:
+            self.last_status_time = now
+            self.publish_status(
+                'final_forward',
+                forward_target_m=self.final_forward_distance_m,
+                forward_progress_m=progress,
+                forward_remaining_m=remaining,
+                forward_lateral_error_m=lateral,
+                forward_speed_mps=command.linear.x,
+                elapsed_sec=elapsed)
+
     def fail_navigation(self, reason, **extra_fields):
         failed_goal = self.active_goal
         attempts = self.recovery_attempts
         self.active_goal = None
+        self.reset_final_forward()
         self.next_recovery_time = 0.0
         self.awaiting_replan = False
         self.clear_path()
@@ -851,8 +960,13 @@ class GoalNavigator(Node):
             paused_for = now - self.localization_bad_since
             self.localization_bad_since = 0.0
             if self.active_goal is not None and paused_for > 0.2:
-                self.clear_path()
-                self.schedule_recovery('localization_recovered', 0.0)
+                if self.final_forward_active():
+                    # Do not count a safety-induced pause against the short
+                    # measured forward segment, and never replan it.
+                    self.final_forward_started_at += paused_for
+                else:
+                    self.clear_path()
+                    self.schedule_recovery('localization_recovered', 0.0)
 
         if self.next_recovery_time > 0.0:
             self.publish_stop()
@@ -867,44 +981,54 @@ class GoalNavigator(Node):
             self.publish_stop()
             return
 
-        if not self.path:
+        final_forward_active = self.final_forward_active()
+        if not self.path and not final_forward_active:
             self.publish_stop()
             return
 
-        obstacle_fresh = (
-            now - self.last_obstacle_signal_time <=
-            self.safety_status_timeout_sec)
-        if not obstacle_fresh:
-            self.publish_stop()
-            self.clear_path()
-            self.schedule_recovery('obstacle_monitor_timeout', 0.0)
-            return
-
-        if self.path_blocked:
-            self.publish_stop()
-            if self.obstacle_blocked_since <= 0.0:
-                self.obstacle_blocked_since = now
-            blocked_for = now - self.obstacle_blocked_since
-            if blocked_for >= self.obstacle_failure_timeout_sec:
-                if self.recovery_attempts >= self.max_recovery_attempts:
-                    self.fail_navigation('dynamic_obstacle_persisted')
+        if self.enable_lidar_obstacle_avoidance:
+            obstacle_fresh = (
+                now - self.last_obstacle_signal_time <=
+                self.safety_status_timeout_sec)
+            if not obstacle_fresh:
+                self.publish_stop()
+                if final_forward_active:
+                    self.fail_navigation(
+                        'final_forward_obstacle_monitor_timeout')
                     return
-            if (blocked_for >= self.obstacle_replan_delay_sec and
-                    self.next_recovery_time <= 0.0 and
-                    not self.awaiting_replan):
-                self.schedule_recovery('dynamic_obstacle', 0.0)
-            if now - self.last_status_time >= self.status_period_sec:
-                self.last_status_time = now
-                self.publish_status(
-                    'obstacle_waiting',
-                    blocked_sec=blocked_for,
-                    obstacle=self.obstacle_status,
-                    recovery_attempt=self.recovery_attempts,
-                    recovery_limit=self.max_recovery_attempts)
-            return
+                self.clear_path()
+                self.schedule_recovery('obstacle_monitor_timeout', 0.0)
+                return
+
+            if self.path_blocked:
+                self.publish_stop()
+                if final_forward_active:
+                    self.fail_navigation('final_forward_blocked')
+                    return
+                if self.obstacle_blocked_since <= 0.0:
+                    self.obstacle_blocked_since = now
+                blocked_for = now - self.obstacle_blocked_since
+                if blocked_for >= self.obstacle_failure_timeout_sec:
+                    if self.recovery_attempts >= self.max_recovery_attempts:
+                        self.fail_navigation('dynamic_obstacle_persisted')
+                        return
+                if (blocked_for >= self.obstacle_replan_delay_sec and
+                        self.next_recovery_time <= 0.0 and
+                        not self.awaiting_replan):
+                    self.schedule_recovery('dynamic_obstacle', 0.0)
+                if now - self.last_status_time >= self.status_period_sec:
+                    self.last_status_time = now
+                    self.publish_status(
+                        'obstacle_waiting',
+                        blocked_sec=blocked_for,
+                        obstacle=self.obstacle_status,
+                        recovery_attempt=self.recovery_attempts,
+                        recovery_limit=self.max_recovery_attempts)
+                return
         self.obstacle_blocked_since = 0.0
 
-        if now - self.path_received_time > self.path_timeout_sec:
+        if (not final_forward_active and
+                now - self.path_received_time > self.path_timeout_sec):
             self.clear_path()
             self.schedule_recovery('path_timeout', 0.0)
             return
@@ -921,6 +1045,10 @@ class GoalNavigator(Node):
                     f'waiting for localization TF: {exc}')
                 self.publish_status(
                     'localization_paused', reason='tf_unavailable')
+            return
+
+        if final_forward_active:
+            self.control_final_forward(x, y, yaw, now)
             return
 
         cross_track = self.update_nearest_path_index(x, y)
@@ -1036,6 +1164,10 @@ class GoalNavigator(Node):
                 if (self.current_path_approach_goal and
                     requested_goal_distance > self.goal_tolerance_m)
                 else 'reached')
+            if (reached_state == 'reached' and
+                    self.final_forward_distance_m > 1e-6):
+                self.start_final_forward(x, y, yaw, now)
+                return
             self.get_logger().info(
                 f'goal {reached_state} path_distance='
                 f'{path_goal_distance:.3f}m requested_distance='

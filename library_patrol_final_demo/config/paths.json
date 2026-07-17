@@ -3,7 +3,7 @@
   "nav_project": "~/Library_Patrol_Project/robot_2k03011/robot_2k0301",
   "vision_project": "~/Library_Patrol_Project/LS2K0301_Library/LS2K030x_Library/Example/Motherboard_Demo/E8_camera/E08_04_shelf_book_vision_demo",
   "board": {
-    "ip": "192.168.43.192",
+    "ip": "192.168.123.70",
     "ssh_user": "root"
   },
   "navigation": {
@@ -14,25 +14,54 @@
     "patrol_api": "/api/patrol/start",
     "cancel_api": "/api/cancel",
     "emergency_stop_api": "/api/emergency-stop",
-    "emergency_release_api": "/api/emergency-release"
+    "emergency_release_api": "/api/emergency-release",
+    "goal_timeout_seconds": 180,
+    "patrol_timeout_seconds": 900
   },
   "demo_web": {
     "host": "0.0.0.0",
     "port": 8090
   },
   "camera": {
-    "board_host": "192.168.43.192",
+    "board_host": "192.168.123.70",
     "board_port": 5000,
     "mjpeg_fps": 12,
     "enabled": true
   },
-  "vision": {
-    "lost_item_api_url": "http://127.0.0.1:8091/api/vision/lost_items"
+    "vision": {
+        "lost_item_api_url": "http://127.0.0.1:8091/api/vision/lost_items",
+        "allow_stub": false,
+        "book_timeout_seconds": 8.0,
+        "book_confirm_frames": 3,
+        "shelf_timeout_seconds": 3.0,
+        "shelf_confirm_frames": 2
+  },
+  "smoke_sensor": {
+    "enabled": true,
+    "raw_path": "/sys/bus/iio/devices/iio:device0/in_voltage3_raw",
+    "scale_path": "/sys/bus/iio/devices/iio:device0/in_voltage_scale",
+    "threshold_mv": 500.0,
+    "clear_threshold_mv": 450.0,
+    "confirm_samples": 3,
+    "interval_seconds": 0.8
+  },
+  "dht11": {
+    "iio_root": "/sys/bus/iio/devices"
   },
   "voice": {
     "enabled": false,
     "mode": "disabled",
     "serial_port": "/dev/ttyS1",
     "baudrate": 115200
-  }
+  },
+  "tts": {
+    "enabled": true,
+    "mode": "ssh",
+    "serial_port": "/dev/ttyS0",
+    "baudrate": 115200,
+    "board_host": "192.168.123.70",
+        "board_user": "root"
+        ,"accept_timeout": 5.0,
+        "completion_timeout": 120.0
+    }
 }

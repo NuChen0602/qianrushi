@@ -20,10 +20,10 @@ struct RobotConfig
     int left_speed_min_pwm = 2500;
     int right_speed_min_pwm = 2500;
 
-    std::string left_motor_pwm = "/dev/zf_pwm_motor_1";
-    std::string right_motor_pwm = "/dev/zf_pwm_motor_2";
-    std::string left_motor_dir = "/dev/zf_gpio_motor_1";
-    std::string right_motor_dir = "/dev/zf_gpio_motor_2";
+    std::string left_motor_pwm = "/dev/zf_pwm_motor_2";
+    std::string right_motor_pwm = "/dev/zf_pwm_motor_1";
+    std::string left_motor_dir = "/dev/zf_gpio_motor_2";
+    std::string right_motor_dir = "/dev/zf_gpio_motor_1";
     int left_motor_forward_dir = 0;
     int right_motor_forward_dir = 0;
 

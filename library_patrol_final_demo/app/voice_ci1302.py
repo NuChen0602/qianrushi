@@ -1,6 +1,11 @@
-class VoiceCi1302Stub:
-    """First version voice adapter: no serial access, only simulated commands."""
+"""Deprecated in-process voice shim.
 
+Real CI302 serial input is owned by scripts/voice_trigger_ssh_bridge.py.  This
+module remains only for the existing web simulation endpoint.
+"""
+
+
+class VoiceCi302Stub:
     def __init__(self):
         self.callback = None
         self.running = False
@@ -18,24 +23,5 @@ class VoiceCi1302Stub:
             self.callback(str(command_id))
 
 
-class VoiceCi1302Serial:
-    """Reserved real CI1302 adapter.
-
-    TODO:
-    - Open configured serial port only when voice.enabled=true.
-    - Read fixed command frames without writing to the port.
-    - Map frames to A1..A9 command ids.
-
-    This class intentionally does not open /dev/ttyS1 in the first demo
-    scaffold.
-    """
-
-    def __init__(self, serial_port="/dev/ttyS1", baudrate=115200):
-        self.serial_port = serial_port
-        self.baudrate = baudrate
-
-    def start(self, callback):
-        raise NotImplementedError("real CI1302 serial adapter is not enabled yet")
-
-    def stop(self):
-        pass
+# Import compatibility for older code; no hardware I/O is performed here.
+VoiceCi1302Stub = VoiceCi302Stub

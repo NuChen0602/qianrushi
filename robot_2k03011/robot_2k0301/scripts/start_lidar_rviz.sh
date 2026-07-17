@@ -3,7 +3,7 @@ set -eo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROS_WS="${PROJECT_ROOT}/ros2_ws"
-BOARD_IP="${BOARD_IP:-192.168.123.70}"
+BOARD_IP="${BOARD_IP:-192.168.43.192}"
 BOARD_DIR="/home/root/robot_2k0301"
 LIDAR_PORT="${LIDAR_PORT:-2368}"
 

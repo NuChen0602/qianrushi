@@ -1,0 +1,48 @@
+# Conservative LS2K0301 configuration for the first hardware connection.
+# Keep robot.yaml as the calibrated operating profile. Promote values from this
+# file only after motor direction, encoder sign, steering and lidar checks pass.
+
+control_period_ms: 10
+
+left_motor_pwm: /dev/zf_pwm_motor_2
+right_motor_pwm: /dev/zf_pwm_motor_1
+left_motor_dir: /dev/zf_gpio_motor_2
+right_motor_dir: /dev/zf_gpio_motor_1
+left_motor_forward_dir: 0
+right_motor_forward_dir: 0
+
+left_encoder: /dev/zf_encoder_dir_2
+right_encoder: /dev/zf_encoder_dir_1
+left_encoder_sign: 1
+right_encoder_sign: -1
+left_encoder_counts_per_meter: 13781.0
+right_encoder_counts_per_meter: 13696.0
+
+steering_servo_pwm: /dev/zf_pwm_servo_1
+servo_center_deg: 95
+servo_left_deg: 125
+servo_right_deg: 80
+servo_settle_ms: 150
+
+imu_heading_enable: 1
+imu_gyro_z_scale: 0.061
+imu_calibration_samples: 100
+status_beep_enable: 1
+beep_gpio: /dev/zf_gpio_beep
+beep_active_level: 1
+
+lidar_serial: /dev/ttyUSB0
+lidar_min_valid_mm: 0
+lidar_self_mask_start_deg: 120
+lidar_self_mask_end_deg: 290
+lidar_self_mask_max_mm: 350
+lidar_stream_port: 2368
+odom_stream_port: 2369
+remote_drive_watchdog_ms: 300
+remote_drive_max_speed_mps: 0.15
+lidar_front_center_deg: 0
+lidar_front_half_width_deg: 30
+lidar_stop_distance_mm: 500
+lidar_slow_distance_mm: 800
+lidar_turn_side_stop_distance_mm: 350
+lidar_turn_side_slow_distance_mm: 600

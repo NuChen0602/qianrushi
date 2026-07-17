@@ -1,0 +1,21 @@
+# REFERENCE PATCH ONLY — no exact Loongson-PMON-V1.005-release202602 source tree was found.
+# Do not apply until it has been rebased and reviewed against the vendor source, board config,
+# and build instructions. This is a behavioral sketch, not an applicable firmware patch.
+--- a/lib/libmenu.c
++++ b/lib/libmenu.c
+@@
+-        if (ch != TIMER)
+-            not_delay = 1;
++        if (ch == TIMER) {
++            if (timeout > 0 && --timeout == 0)
++                return MENU_BOOT_DEFAULT;
++        } else if (ch == '\r' || ch == '\n') {
++            return MENU_BOOT_CURRENT;
++        } else if (ch == 'c') {
++            return MENU_MAINTENANCE;
++        } else if (is_navigation_key(ch)) {
++            select_menu_item(ch);
++            timeout = configured_timeout ? configured_timeout : SAFE_DEFAULT_TIMEOUT;
++        } else {
++            /* Ignore UART noise and unrecognised bytes; do not freeze countdown. */
++        }

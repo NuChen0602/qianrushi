@@ -52,7 +52,7 @@ def generate_launch_description():
                 'host': board_ip,
                 'port': ParameterValue(odom_port, value_type=int),
                 'enable_drive': True,
-                'enable_drive_obstacle_safety': True,
+                'enable_drive_obstacle_safety': False,
                 'front_sector_center_rad': 0.0,
                 'obstacle_stop_distance_m': 0.08,
                 'obstacle_slow_distance_m': 0.35,

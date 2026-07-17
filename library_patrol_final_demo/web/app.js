@@ -74,15 +74,24 @@ let bookVisionRequestPending = false;
 const $ = (id) => document.getElementById(id);
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  const data = await response.json();
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || response.statusText);
+  const { timeoutMs = 1800, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(path, {
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      ...fetchOptions,
+      signal: controller.signal,
+    });
+    const data = await response.json();
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || response.statusText);
+    }
+    return data;
+  } finally {
+    clearTimeout(timeout);
   }
-  return data;
 }
 
 function setText(id, value) {
@@ -233,6 +242,20 @@ function drawMap() {
     ctx.stroke();
   }
 
+  // Navigation supplies laser returns in map/world coordinates.
+  const scan = nav.scan || [];
+  if (Array.isArray(scan) && scan.length) {
+    ctx.save();
+    ctx.fillStyle = "rgba(14, 165, 233, 0.82)";
+    scan.forEach((point) => {
+      const p = Array.isArray(point) ? { x: point[0], y: point[1] } : point;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
+      const [cx, cy] = convert(p.x, p.y);
+      ctx.fillRect(cx - 1.4, cy - 1.4, 2.8, 2.8);
+    });
+    ctx.restore();
+  }
+
   const points = state.points || {};
   Object.entries(points).forEach(([id, point]) => {
     if (!shouldDrawMapPoint(id, point)) return;
@@ -288,8 +311,8 @@ function renderState(data) {
   const cameraStatus = $("camera-stream-status");
   if (cameraStatus) {
     cameraStatus.textContent = camera.has_frame
-      ? `MJPEG · ${camera.source_fps || 0} FPS · 帧 ${camera.frame_id || 0}`
-      : "MJPEG · 等待摄像头";
+      ? `实时画面 · ${camera.source_fps || 0} FPS · 帧 ${camera.frame_id || 0}`
+      : "实时画面 · 等待摄像头";
   }
   setText("task", order.current_title || order.current_task);
   setText("stage", order.stage);
@@ -310,25 +333,78 @@ function renderState(data) {
   drawMap();
   drawCameraOverlay();
   updateAIVisionPanelFromState(data);
+  updateSmokeStatus(data.smoke_sensor || {});
+  updateEnvironmentStatus(data.environment || {});
+}
+
+function updateEnvironmentStatus(environment) {
+  const tempEl = document.getElementById("env-temperature");
+  const humEl = document.getElementById("env-humidity");
+  const stateEl = document.getElementById("env-state");
+  if (!tempEl || !humEl || !stateEl) return;
+  if (!environment.ok) {
+    tempEl.textContent = "--℃";
+    humEl.textContent = "--%";
+    const error = String(environment.error || "");
+    stateEl.textContent = error.includes("未注册")
+      ? "DHT11 驱动未注册"
+      : "温湿度传感器离线";
+    stateEl.className = "env-value";
+    return;
+  }
+  tempEl.textContent = `${Number(environment.temperature_c).toFixed(1)}℃`;
+  humEl.textContent = `${Number(environment.humidity_rh).toFixed(1)}%`;
+  stateEl.textContent = environment.stale ? "数据陈旧" : "正常";
+  stateEl.className = environment.stale ? "env-value" : "env-value env-ok";
+}
+
+function updateSmokeStatus(smoke) {
+  const valueEl = document.getElementById("env-smoke");
+  const stateEl = document.getElementById("env-state");
+  if (!valueEl || !stateEl) return;
+  if (!smoke.enabled) {
+    valueEl.textContent = "MQ-2 已禁用";
+    return;
+  }
+  if (!smoke.available) {
+    valueEl.textContent = "MQ-2 / A3 未连接";
+    stateEl.textContent = "传感器离线";
+    stateEl.className = "env-value";
+    return;
+  }
+  const volts = Number(smoke.voltage_mv || 0) / 1000;
+  valueEl.textContent = `MQ-2 / A3 ${volts.toFixed(3)}V (raw ${smoke.raw})`;
+  stateEl.textContent = smoke.alarm ? "烟雾告警" : "正常";
+  stateEl.className = smoke.alarm ? "env-value" : "env-value env-ok";
 }
 
 async function refresh() {
+  if (refresh.pending) return;
+  refresh.pending = true;
   try {
-    const data = await api("/api/demo/state");
+    const data = await api("/api/demo/state", { timeoutMs: 1200 });
     renderState(data);
   } catch (error) {
     $("connection").textContent = `演示服务异常：${error.message}`;
+  } finally {
+    refresh.pending = false;
   }
 }
+refresh.pending = false;
 
 async function refreshMap() {
+  if (refreshMap.pending) return;
+  refreshMap.pending = true;
   try {
-    latestMap = await api("/api/demo/map");
+    latestMap = await api("/api/demo/map", { timeoutMs: 1200 });
     drawMap();
   } catch (_error) {
-    latestMap = null;
+    // Keep the last valid map visible during a transient request failure.
+  } finally {
+    refreshMap.pending = false;
   }
 }
+refreshMap.pending = false;
 
 document.addEventListener("click", (event) => {
   const action = event.target.dataset.action;
@@ -343,24 +419,44 @@ window.addEventListener("resize", () => {
 });
 refresh();
 refreshMap();
-setInterval(refresh, 800);
-setInterval(refreshMap, 3000);
+setInterval(refresh, 250);
+setInterval(refreshMap, 1000);
 
-// MJPEG keeps one HTTP connection open. Reconnect only after a stream error.
+// Firefox may leave an MJPEG <img> connection alive while no longer repainting it.
+// Refresh the cached latest JPEG instead; the old image remains visible until the
+// replacement has loaded, so this is both resilient and flicker-free.
 const cameraFeed = document.getElementById("camera-feed");
+let cameraRefreshPending = false;
+let cameraObjectUrl = null;
+
+async function refreshCameraFrame() {
+  if (!cameraFeed || cameraRefreshPending || document.hidden) return;
+  cameraRefreshPending = true;
+  try {
+    const response = await fetch(`/camera.jpg?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) throw new Error("返回内容不是图像");
+    const nextUrl = URL.createObjectURL(blob);
+    const previousUrl = cameraObjectUrl;
+    cameraObjectUrl = nextUrl;
+    cameraFeed.src = nextUrl;
+    if (previousUrl) URL.revokeObjectURL(previousUrl);
+  } catch (_error) {
+    const status = document.getElementById("camera-stream-status");
+    if (status) status.textContent = "摄像头画面断开，正在重连";
+  } finally {
+    cameraRefreshPending = false;
+  }
+}
+
 if (cameraFeed) {
   cameraFeed.addEventListener("load", () => {
     const status = document.getElementById("camera-stream-status");
-    if (status && status.textContent.includes("连接中")) status.textContent = "MJPEG 已连接";
+    if (status && status.textContent.includes("连接中")) status.textContent = "摄像头已连接";
     drawCameraOverlay();
   });
-  cameraFeed.addEventListener("error", () => {
-    const status = document.getElementById("camera-stream-status");
-    if (status) status.textContent = "MJPEG 断开，正在重连";
-    setTimeout(() => {
-      cameraFeed.src = `/camera.mjpg?t=${Date.now()}`;
-    }, 1200);
-  });
+  setInterval(refreshCameraFrame, 220);
 }
 
 
@@ -427,8 +523,9 @@ function drawCameraOverlay() {
   ctx.clearRect(0, 0, rect.width, rect.height);
 
   const lostActive = isLostItemTask(latestState) && latestLostVision && latestLostVision.active;
-  const bookActive = isBookVisionTask(latestState) && latestBookVision && latestBookVision.ok;
-  const payload = lostActive ? latestLostVision : (bookActive ? latestBookVision : null);
+  const bookTaskActive = isBookVisionTask(latestState);
+  const bookVisible = latestBookVision && latestBookVision.ok;
+  const payload = lostActive ? latestLostVision : (bookVisible ? latestBookVision : null);
   const imageSize = payload && payload.image_size ? payload.image_size : {};
   const sourceWidth = Number(imageSize.width || imageElement.naturalWidth || 640);
   const sourceHeight = Number(imageSize.height || imageElement.naturalHeight || 480);
@@ -459,11 +556,12 @@ function drawCameraOverlay() {
         label,
       );
     });
-  } else if (bookActive) {
+  } else if (bookVisible) {
     (latestBookVision.books || []).forEach((book) => {
       const bbox = book.bbox || [];
       if (bbox.length !== 4) return;
-      const target = Number(book.id) === Number(latestBookVision.expected_id);
+      const target = bookTaskActive
+        && Number(book.id) === Number(latestBookVision.expected_id);
       drawDetectionBox(ctx, {
         x: bbox[0],
         y: bbox[1],
@@ -497,10 +595,6 @@ async function refreshLostVision() {
 }
 
 async function refreshBookVision() {
-  if (!isBookVisionTask(latestState)) {
-    latestBookVision = null;
-    return;
-  }
   if (bookVisionRequestPending) return;
   bookVisionRequestPending = true;
   try {
@@ -519,24 +613,9 @@ setInterval(refreshLostVision, 150);
 setInterval(refreshBookVision, 500);
 
 
-// === final demo environment status mock refresh ===
-// DHT11 已接入 P89，当前演示阶段用稳定环境值展示。
+// === environment status refresh ===
 function updateEnvironmentStatusPanel() {
-  const tempEl = document.getElementById("env-temperature");
-  const humEl = document.getElementById("env-humidity");
-  const stateEl = document.getElementById("env-state");
-
-  if (!tempEl || !humEl || !stateEl) {
-    return;
-  }
-
-  const now = Date.now() / 1000;
-  const temp = 26.4 + Math.sin(now / 18) * 0.2;
-  const hum = 48 + Math.round(Math.sin(now / 22) * 1);
-
-  tempEl.textContent = `${temp.toFixed(1)}℃`;
-  humEl.textContent = `${hum}%`;
-  stateEl.textContent = "正常";
+  if (latestState && latestState.environment) updateEnvironmentStatus(latestState.environment);
 }
 
 setInterval(updateEnvironmentStatusPanel, 2000);

@@ -7,6 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ROBOT_USE_LS2K0301_LIBRARY "Build with SeekFree LS2K0301 official library" OFF)
+option(ROBOT_BUILD_BOARD_VISION "Build the on-board OpenCV vision program" ON)
 
 add_subdirectory(board_app)
-

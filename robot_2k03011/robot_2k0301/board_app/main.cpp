@@ -74,6 +74,15 @@ struct CliOptions
     bool route_action = false;
     bool lidar_test = false;
     bool lidar_stream_test = false;
+    bool board_navigation = false;
+    std::string robot_config_path = "config/robot.yaml";
+    std::string navigation_map = "maps/library.yaml";
+    double start_x = 0.0;
+    double start_y = 0.0;
+    double start_yaw = 0.0;
+    double goal_x = 0.0;
+    double goal_y = 0.0;
+    double goal_yaw = 0.0;
     std::string route_name;
     std::string route_config_path = "config/routes.yaml";
     int route_repeat = 1;
@@ -417,6 +426,46 @@ CliOptions parseCli(int argc, char** argv)
             options.lidar_test = test == "lidar";
             options.lidar_stream_test = test == "lidar-stream";
         }
+        else if(arg == "--board-navigation")
+        {
+            options.board_navigation = true;
+        }
+        else if(arg == "--config" && i + 1 < argc)
+        {
+            options.robot_config_path = argv[++i];
+        }
+        else if(parseOptionValue(arg, "--config", inline_value))
+        {
+            options.robot_config_path = inline_value;
+        }
+        else if(arg == "--map" && i + 1 < argc)
+        {
+            options.navigation_map = argv[++i];
+        }
+        else if(arg == "--start-x" && i + 1 < argc)
+        {
+            options.start_x = parseDouble(argv[++i], options.start_x);
+        }
+        else if(arg == "--start-y" && i + 1 < argc)
+        {
+            options.start_y = parseDouble(argv[++i], options.start_y);
+        }
+        else if(arg == "--start-yaw" && i + 1 < argc)
+        {
+            options.start_yaw = parseDouble(argv[++i], options.start_yaw);
+        }
+        else if(arg == "--goal-x" && i + 1 < argc)
+        {
+            options.goal_x = parseDouble(argv[++i], options.goal_x);
+        }
+        else if(arg == "--goal-y" && i + 1 < argc)
+        {
+            options.goal_y = parseDouble(argv[++i], options.goal_y);
+        }
+        else if(arg == "--goal-yaw" && i + 1 < argc)
+        {
+            options.goal_yaw = parseDouble(argv[++i], options.goal_yaw);
+        }
         else if(arg == "--move" && i + 1 < argc)
         {
             const std::string direction = argv[++i];
@@ -585,6 +634,9 @@ void printUsage()
         << "  robot_board_app --test lidar-stream\n\n"
         << "  robot_board_app --test odom-stream\n\n"
         << "  robot_board_app --test mapping-drive\n\n"
+        << "  robot_board_app --board-navigation --map maps/library.yaml "
+           "--start-x 0 --start-y 0 --start-yaw 0 --goal-x 0.5 --goal-y 0 --goal-yaw 0 "
+           "--timeout 120 --config config/robot.yaml\n\n"
         << "  robot_board_app --test teleop --speed 40 "
            "--stop-distance 500 --slow-distance 800\n\n"
         << "  robot_board_app --move forward --distance 0.5 --speed 30 --timeout 20\n"
@@ -603,7 +655,8 @@ bool hasTest(const CliOptions& options)
            options.straight_lidar_test || options.odom_stream_test ||
            options.mapping_drive_test ||
            options.teleop_test || options.move_action || options.turn_action ||
-           options.route_action || options.lidar_test || options.lidar_stream_test;
+           options.route_action || options.lidar_test || options.lidar_stream_test ||
+           options.board_navigation;
 }
 } // namespace
 
@@ -611,13 +664,13 @@ int main(int argc, char** argv)
 {
     robot::Logger::info("robot_2k0301 board app starting");
 
-    const auto config = robot::Config::loadRobotConfig("config/robot.yaml");
     const auto cli = parseCli(argc, argv);
     if(cli.show_help || !hasTest(cli))
     {
         printUsage();
         return 0;
     }
+    const auto config = robot::Config::loadRobotConfig(cli.robot_config_path);
 
     if(cli.lidar_test || cli.lidar_stream_test)
     {
@@ -698,6 +751,14 @@ int main(int argc, char** argv)
     else if(cli.mapping_drive_test)
     {
         test_ok = hardware.runOdometryTcpServer(config.odom_stream_port, true);
+    }
+    else if(cli.board_navigation)
+    {
+        test_ok = hardware.runBoardNavigation(
+            cli.navigation_map,
+            cli.start_x, cli.start_y, cli.start_yaw,
+            cli.goal_x, cli.goal_y, cli.goal_yaw,
+            cli.timeout_seconds);
     }
     else if(cli.teleop_test)
     {

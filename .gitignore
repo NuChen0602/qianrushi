@@ -7,6 +7,8 @@ log/
 logs/
 library_patrol_final_demo/dataset_recordings/
 library_patrol_final_demo/candidate_datasets/
+library_patrol_final_demo/data/voice/recordings/
+library_patrol_final_demo/data/voice/transcripts/
 library_patrol_final_demo/local_models/*
 !library_patrol_final_demo/local_models/lost_item_hog_svm.xml
 !library_patrol_final_demo/local_models/lost_item_hog_svm.json

@@ -27,6 +27,8 @@ def generate_launch_description():
     obstacle_stop_distance = LaunchConfiguration('obstacle_stop_distance_m')
     obstacle_slow_distance = LaunchConfiguration('obstacle_slow_distance_m')
     enable_ips200_map_display = LaunchConfiguration('enable_ips200_map_display')
+    enable_autonomous_exploration = LaunchConfiguration('enable_autonomous_exploration')
+    exploration_radius = LaunchConfiguration('exploration_radius_m')
     ips200_map_port = LaunchConfiguration('ips200_map_port')
 
     laser_bridge = Node(
@@ -107,6 +109,30 @@ def generate_launch_description():
         arguments=['-d', str(share / 'config' / 'mapping.rviz')],
         output='screen',
     )
+    planner = Node(package='robot_lidar_bridge', executable='ackermann_path_planner',
+                   name='ackermann_path_planner',
+                   parameters=[str(share / 'config' / 'ackermann_navigation.yaml'), {
+                       # Ackermann steering cannot rotate in place. Mapping
+                       # recovery therefore permits short multi-point turns;
+                       # the drive bridge's obstacle stop remains active.
+                       'allow_reverse': True,
+                   }],
+                   condition=IfCondition(enable_autonomous_exploration), output='screen')
+    safety = Node(package='robot_lidar_bridge', executable='navigation_safety',
+                  name='navigation_safety',
+                  parameters=[str(share / 'config' / 'ackermann_navigation.yaml')],
+                  condition=IfCondition(enable_autonomous_exploration), output='screen')
+    navigator = Node(package='robot_lidar_bridge', executable='goal_navigator',
+                     name='goal_navigator',
+                     parameters=[str(share / 'config' / 'ackermann_navigation.yaml'), {
+                         'max_speed_mps': 0.12,
+                         'min_speed_mps': 0.08,
+                     }],
+                     condition=IfCondition(enable_autonomous_exploration), output='screen')
+    explorer = Node(package='robot_lidar_bridge', executable='frontier_explorer',
+                    name='frontier_explorer', parameters=[{
+                        'boundary_radius_m': ParameterValue(exploration_radius, value_type=float),
+                    }], condition=IfCondition(enable_autonomous_exploration), output='screen')
 
     def on_guard_exit(event, _context):
         if event.returncode == 0:
@@ -117,6 +143,10 @@ def generate_launch_description():
                 map_cells,
                 ips200_map_stream,
                 rviz,
+                planner,
+                safety,
+                navigator,
+                explorer,
             ]
         return [
             LogInfo(msg='ERROR: Mapping inputs failed; refusing to start SLAM.'),
@@ -141,6 +171,8 @@ def generate_launch_description():
         DeclareLaunchArgument('obstacle_stop_distance_m', default_value='0.5'),
         DeclareLaunchArgument('obstacle_slow_distance_m', default_value='0.8'),
         DeclareLaunchArgument('enable_ips200_map_display', default_value='true'),
+        DeclareLaunchArgument('enable_autonomous_exploration', default_value='false'),
+        DeclareLaunchArgument('exploration_radius_m', default_value='2.0'),
         DeclareLaunchArgument('ips200_map_port', default_value='2370'),
         laser_bridge,
         odometry_bridge,

@@ -2,7 +2,8 @@ ackermann_path_planner:
   ros__parameters:
     map_frame: map
     base_frame: base_link
-    map_topic: /navigation/planning_map
+    # Plan against the static map only; dynamic lidar obstacles are disabled.
+    map_topic: /map
     goal_topic: /goal_pose
     path_topic: /planned_path
     replan_topic: /navigation/replan
@@ -26,7 +27,7 @@ ackermann_path_planner:
     max_steer_angle_deg: 28.0
     steering_samples: 5
     goal_tolerance: 0.10
-    goal_yaw_tolerance_deg: 30.0
+    goal_yaw_tolerance_deg: 20.0
     # Bias Hybrid A* toward the RViz 2D Goal Pose arrow. A larger heading
     # heuristic lets the first strict-yaw search accept a slightly longer path
     # instead of arriving near the goal and fixing yaw with many small moves.
@@ -69,15 +70,21 @@ goal_navigator:
     localization_status_topic: /navigation/localization_status
     path_blocked_topic: /navigation/path_blocked
     obstacle_status_topic: /navigation/obstacle_status
+    enable_lidar_obstacle_avoidance: false
     cancel_topic: /navigation/cancel
     emergency_stop_topic: /navigation/emergency_stop
     status_topic: /navigation/status
     control_rate_hz: 20.0
 
-    max_speed_mps: 0.26
-    min_speed_mps: 0.10
+    max_speed_mps: 0.10
+    min_speed_mps: 0.06
     goal_tolerance_m: 0.10
-    goal_yaw_tolerance_deg: 30.0
+    goal_yaw_tolerance_deg: 20.0
+    # After a true goal arrival, advance along the vehicle's current heading.
+    # Progress is measured from map -> base_link, never by a fixed timer.
+    final_forward_distance_m: 0.05
+    final_forward_speed_mps: 0.04
+    final_forward_timeout_sec: 4.0
     final_yaw_control_radius_m: 0.25
     slow_radius_m: 0.45
     lookahead_min_m: 0.12
@@ -111,10 +118,10 @@ goal_navigator:
     # Slow down before curvature, then apply jerk-limited acceleration.
     curvature_lookahead_m: 0.45
     curvature_speed_gain: 0.28
-    min_curve_speed_mps: 0.15
-    max_acceleration_mps2: 0.45
-    max_deceleration_mps2: 0.45
-    max_jerk_mps3: 1.8
+    min_curve_speed_mps: 0.07
+    max_acceleration_mps2: 0.10
+    max_deceleration_mps2: 0.18
+    max_jerk_mps3: 0.35
     path_timeout_sec: 120.0
     status_period_sec: 0.5
     replan_cooldown_sec: 2.0
@@ -132,6 +139,13 @@ goal_navigator:
 
 navigation_safety:
   ros__parameters:
+    # During online mapping the body blocks part of the lidar. Only unknown
+    # cells under the robot's current physical footprint are cleared; occupied
+    # wall/obstacle cells are never changed.
+    clear_robot_unknown_footprint: true
+    vehicle_length_m: 0.26
+    vehicle_width_m: 0.135
+    footprint_clearance_margin_m: 0.02
     map_frame: map
     base_frame: base_link
     map_topic: /map
@@ -144,6 +158,9 @@ navigation_safety:
     localization_ok_topic: /navigation/localization_ok
     obstacle_status_topic: /navigation/obstacle_status
     path_blocked_topic: /navigation/path_blocked
+    # Retain /scan only for localization health; do not create dynamic
+    # obstacle cells or block/replan a path from lidar observations.
+    enable_dynamic_obstacle_layer: false
 
     publish_rate_hz: 5.0
     scan_stride: 2

@@ -33,7 +33,12 @@ def json_response(handler, payload, status=200):
     handler.send_header("Content-Length", str(len(data)))
     handler.send_header("Cache-Control", "no-store")
     handler.end_headers()
-    handler.wfile.write(data)
+    try:
+        handler.wfile.write(data)
+    except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+        # A browser may abandon an obsolete polling request while a newer one
+        # is already in flight. This response is disposable.
+        return
 
 
 def read_json_body(handler, limit=65536):
@@ -60,6 +65,8 @@ def simplify_navigation_state(state):
         "available": True,
         "robot": state.get("robot"),
         "robot_connected": state.get("robot_connected"),
+        "lidar_connected": state.get("lidar_connected"),
+        "scan": state.get("scan", []),
         "goal": state.get("goal"),
         "path": state.get("path", []),
         "planner": state.get("planner", {}),

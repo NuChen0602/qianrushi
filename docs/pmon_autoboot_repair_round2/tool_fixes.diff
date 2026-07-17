@@ -1,0 +1,356 @@
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/board_recover_serial.py	2026-07-16 06:10:29.053936540 +0800
+@@ -0,0 +1,126 @@
++#!/usr/bin/env python3
++"""Read PMON serial output.  Only explicit, eligible --send-cr writes one 0x0D."""
++import argparse
++import datetime
++import os
++import pathlib
++import select
++import termios
++import time
++
++PMON_MARKERS = (b"pmon", b"boot menu", b"seekfree", b"boot.cfg", b"timeout")
++LINUX_MARKERS = (b"now booting", b"loading file", b"boot with parameters", b"linux version", b"starting kernel")
++SERIAL_STATE_PMON = "SERIAL_STATE_PMON"
++SERIAL_STATE_LINUX_BOOTING = "SERIAL_STATE_LINUX_BOOTING"
++SERIAL_STATE_SILENT = "SERIAL_STATE_SILENT"
++SERIAL_STATE_UNKNOWN = "SERIAL_STATE_UNKNOWN"
++
++def classify_serial(data):
++    """Linux markers win: they demonstrate the later boot stage in mixed captures."""
++    lower = data.lower()
++    if not lower:
++        return SERIAL_STATE_SILENT
++    if any(marker in lower for marker in LINUX_MARKERS):
++        return SERIAL_STATE_LINUX_BOOTING
++    if any(marker in lower for marker in PMON_MARKERS):
++        return SERIAL_STATE_PMON
++    return SERIAL_STATE_UNKNOWN
++
++def marker_names(data, markers):
++    lower = data.lower()
++    return [marker.decode("ascii") for marker in markers if marker in lower]
++
++def safe_display(data):
++    printable = ''.join(chr(byte) if 32 <= byte <= 126 else '.' for byte in data)
++    return "ascii=%r hex=%s" % (printable, data.hex(' '))
++
++def should_write_cr(state, send_cr, force_single_cr_on_silent):
++    return send_cr and (state == SERIAL_STATE_PMON or
++                        (state == SERIAL_STATE_SILENT and force_single_cr_on_silent))
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--device', default='/dev/ttyACM0')
++    parser.add_argument('--dry-run', action='store_true', help='read only (also the default)')
++    parser.add_argument('--send-cr', action='store_true', help='allow at most one CR (0x0D), only for PMON')
++    parser.add_argument('--force-single-cr-on-silent', action='store_true',
++                        help='ONLY after on-site confirmation that a silent board is stopped in PMON')
++    args = parser.parse_args()
++    if args.dry_run and args.send_cr:
++        parser.error('--dry-run and --send-cr are mutually exclusive')
++    if args.force_single_cr_on_silent and not args.send_cr:
++        parser.error('--force-single-cr-on-silent requires --send-cr')
++
++    stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
++    root = pathlib.Path(__file__).resolve().parents[2]
++    log_path = root / 'docs' / 'pmon_autoboot_repair_round2' / ('serial_recovery_' + stamp + '.log')
++    log_path.parent.mkdir(parents=True, exist_ok=True)
++    fd = None
++    old = None
++    try:
++        flags = (os.O_RDWR if args.send_cr else os.O_RDONLY) | os.O_NOCTTY | os.O_NONBLOCK
++        fd = os.open(args.device, flags)
++        old = termios.tcgetattr(fd)
++        attrs = termios.tcgetattr(fd)
++        attrs[0] = termios.IGNPAR
++        attrs[1] = 0
++        attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
++        attrs[3] = 0
++        attrs[4] = termios.B115200
++        attrs[5] = termios.B115200
++        attrs[6][termios.VMIN] = 0
++        attrs[6][termios.VTIME] = 0
++        termios.tcsetattr(fd, termios.TCSANOW, attrs)
++        captured = bytearray()
++        with log_path.open('w', encoding='utf-8') as log:
++            log.write('device=%s mode=%s; 115200 8N1; software/hardware flow control disabled; DTR/RTS untouched\n' %
++                      (args.device, 'send-cr' if args.send_cr else 'dry-run'))
++            def read_for(seconds):
++                end = time.monotonic() + seconds
++                while time.monotonic() < end:
++                    ready, _, _ = select.select([fd], [], [], min(.25, end - time.monotonic()))
++                    if ready:
++                        try:
++                            chunk = os.read(fd, 4096)
++                        except BlockingIOError:
++                            continue
++                        if chunk:
++                            captured.extend(chunk)
++                            log.write('%s %s\n' % (datetime.datetime.now().isoformat(timespec='milliseconds'), safe_display(chunk)))
++                            log.flush()
++            read_for(5)
++            before = bytes(captured)
++            state = classify_serial(before)
++            allow_write = should_write_cr(state, args.send_cr, args.force_single_cr_on_silent)
++            write_count = 0
++            log.write('state=%s bytes_before_write=%d pmon_markers=%s linux_markers=%s\n' %
++                      (state, len(before), marker_names(before, PMON_MARKERS), marker_names(before, LINUX_MARKERS)))
++            if allow_write:
++                write_count = os.write(fd, b'\r')
++                if write_count != 1:
++                    raise OSError('CR write count was %d, expected 1' % write_count)
++            log.write('whether_cr_written=%s exact_write_count=%d\n' % (write_count == 1, write_count))
++            log.flush()
++            read_for(30)
++            after = bytes(captured)
++            log.write('markers_after_write=%s final_state=%s\n' %
++                      (marker_names(after, PMON_MARKERS + LINUX_MARKERS), classify_serial(after)))
++        print(log_path)
++    except OSError as exc:
++        print('serial open/read failure: %s' % exc)
++        print('If permission is required, manually run one of:')
++        print('sudo python3 %s --send-cr' % pathlib.Path(__file__).resolve())
++        print('sudo python3 %s --send-cr --force-single-cr-on-silent' % pathlib.Path(__file__).resolve())
++        return 1
++    finally:
++        if fd is not None:
++            if old is not None:
++                try:
++                    termios.tcsetattr(fd, termios.TCSANOW, old)
++                except termios.error:
++                    pass
++            os.close(fd)
++    return 0
++
++if __name__ == '__main__':
++    raise SystemExit(main())
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/recover_board_and_wait_ssh.sh	2026-07-16 06:09:21.456714076 +0800
+@@ -0,0 +1,56 @@
++#!/usr/bin/env bash
++set -euo pipefail
++dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++known_ip=192.168.43.192
++timeout=120
++wait_only=0
++while (($#)); do
++  case "$1" in
++    --wait-only) wait_only=1 ;;
++    --known-ip) known_ip=${2:?--known-ip requires an address}; shift ;;
++    --timeout) timeout=${2:?--timeout requires seconds}; shift ;;
++    *) echo "Usage: $0 [--wait-only] [--known-ip IP] [--timeout SECONDS]" >&2; exit 64 ;;
++  esac
++  shift
++done
++case "$timeout" in *[!0-9]*|'') echo 'timeout must be a non-negative integer' >&2; exit 64;; esac
++probe_ssh() {
++  ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 "root@$1" \
++    'echo BOARD_ONLINE; uname -a; cat /proc/uptime'
++}
++approve_or_report() {
++  "$dir/discover_board_ip.sh" --known-ip "$known_ip" || true
++  echo 'No SSH connection was made to an unapproved host key.' >&2
++}
++if nc -z -w 1 "$known_ip" 22 >/dev/null 2>&1; then
++  if probe_ssh "$known_ip"; then exit 0; fi
++  approve_or_report
++  exit 3
++fi
++if ((wait_only)); then
++  echo "Waiting up to ${timeout}s for ${known_ip}:22; serial is not accessed." >&2
++  elapsed=0
++  while ((elapsed < timeout)); do
++    if nc -z -w 1 "$known_ip" 22 >/dev/null 2>&1; then
++      if probe_ssh "$known_ip"; then exit 0; fi
++      approve_or_report; exit 3
++    fi
++    sleep 1; ((elapsed += 1))
++  done
++  approve_or_report
++  exit 1
++fi
++log=$(python3 "$dir/board_recover_serial.py" --dry-run) || exit $?
++echo "Serial dry-run log: $log" >&2
++state=$(grep -E '^state=SERIAL_STATE_' "$log" | tail -n 1 | sed 's/ .*//; s/^state=//')
++case "$state" in
++  SERIAL_STATE_PMON)
++    echo "PMON observed. User must manually confirm and execute exactly once:" >&2
++    echo "sudo python3 $dir/board_recover_serial.py --send-cr" >&2; exit 20 ;;
++  SERIAL_STATE_SILENT)
++    echo "No serial bytes observed. Given the on-site finding, user may manually confirm exactly once:" >&2
++    echo "sudo python3 $dir/board_recover_serial.py --send-cr --force-single-cr-on-silent" >&2; exit 21 ;;
++  SERIAL_STATE_LINUX_BOOTING)
++    echo "Linux boot markers observed; run $0 --wait-only --known-ip $known_ip --timeout $timeout" >&2; exit 22 ;;
++  *) echo "Serial output is unknown; no byte was written. Review $log" >&2; exit 23 ;;
++esac
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/discover_board_ip.sh	2026-07-16 06:10:07.568863717 +0800
+@@ -0,0 +1,43 @@
++#!/usr/bin/env bash
++# Read-only TCP/22 discovery. It never changes known_hosts or opens SSH sessions.
++set -euo pipefail
++known_ip=192.168.43.192
++accept=0
++while (($#)); do
++  case "$1" in
++    --known-ip) known_ip=${2:?--known-ip requires an address}; shift ;;
++    --accept-hostkey) accept=1 ;;
++    *) echo "Usage: $0 [--known-ip IP] [--accept-hostkey]" >&2; exit 64 ;;
++  esac
++  shift
++done
++port_open() { nc -z -w 1 "$1" 22 >/dev/null 2>&1; }
++results=$(mktemp); trap 'rm -f "$results"' EXIT
++port_open "$known_ip" && printf '%s\n' "$known_ip" >>"$results"
++if ! port_open "$known_ip"; then
++  while read -r ip _; do case "$ip" in 192.168.43.*) printf '%s\n' "$ip" >>"$results";; esac; done < <(ip neigh 2>/dev/null || true)
++  for n in $(seq 1 254); do
++    ip="192.168.43.$n"
++    (port_open "$ip" && printf '%s\n' "$ip" >>"$results") &
++    while (( $(jobs -pr | wc -l) >= 16 )); do wait -n || true; done
++  done
++  wait || true
++fi
++found=0
++while read -r ip; do
++  found=1
++  keys=$(ssh-keyscan -T 3 "$ip" 2>/dev/null || true)
++  [[ -n $keys ]] || { echo "Candidate $ip has port 22 but no keyscan result" >&2; continue; }
++  candidate_fp=$(printf '%s\n' "$keys" | ssh-keygen -lf - 2>/dev/null | awk '{print $2, $4}' | sort -u)
++  known_keys=$(ssh-keygen -F "$ip" 2>/dev/null | awk '!/^#/' || true)
++  known_fp=$(printf '%s\n' "$known_keys" | ssh-keygen -lf - 2>/dev/null | awk '{print $2, $4}' | sort -u)
++  echo "Candidate $ip SSH host-key algorithm/fingerprint:" >&2
++  printf '%s\n' "$candidate_fp" >&2
++  approved=no
++  [[ -n $candidate_fp && -n $known_fp && $candidate_fp == "$known_fp" ]] && approved=yes
++  if ((accept)); then
++    echo "--accept-hostkey does not write known_hosts or open SSH; fingerprint remains user-review only." >&2
++  fi
++  printf 'BOARD_IP=%s\nHOSTKEY_APPROVED=%s\n' "$ip" "$approved"
++done < <(sort -Vu "$results")
++((found)) || { echo 'No TCP/22 candidate found.' >&2; exit 1; }
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/board_readonly_audit.sh	2026-07-16 06:10:29.054936543 +0800
+@@ -0,0 +1,39 @@
++#!/usr/bin/env bash
++# Strictly read-only remote audit. Full dmesg is saved locally, never on the board.
++set -uo pipefail
++ip=${1:?Usage: $0 BOARD_IP}
++dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++root=$(CDPATH= cd -- "$dir/../.." && pwd)
++out="$root/docs/pmon_autoboot_repair_round2"
++mkdir -p "$out"
++stamp=$(date +%Y%m%d_%H%M%S)
++summary="$out/board_audit_${ip}_${stamp}.log"
++opts=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5)
++ssh "${opts[@]}" "root@$ip" 'sh -s' <<'REMOTE' | tee "$summary"
++run() { echo "===== $1 ====="; shift; "$@" 2>&1 || true; }
++run uname uname -a
++run proc_version cat /proc/version
++run cmdline cat /proc/cmdline
++run consoles cat /proc/consoles
++run uptime cat /proc/uptime
++run cpuinfo cat /proc/cpuinfo
++run serial_driver cat /proc/tty/driver/serial
++run tty_holders fuser -v /dev/ttyS0 /dev/ttyS1
++run ps ps w
++run mounts mount
++run proc_mounts cat /proc/mounts
++run boot_list ls -lah /boot
++echo '===== boot_cfg_listing_glob ====='; ls -ln /boot/boot.cfg* 2>&1 || true
++run boot_cfg_numbered nl -ba /boot/boot.cfg
++echo '===== boot_cfg_hashes ====='; sha256sum /boot/boot.cfg /boot/boot.cfg.* 2>/dev/null || true
++for f in /boot/boot.cfg /boot/boot.cfg.*; do [ -f "$f" ] || continue; echo "===== $f ====="; sed -n '1,160p' "$f"; done
++for f in /proc/device-tree/chosen/bootargs /proc/device-tree/chosen/stdout-path /proc/device-tree/aliases/serial0 /proc/device-tree/aliases/serial1; do [ -e "$f" ] || continue; echo "===== $f ====="; od -An -tx1 -c "$f" 2>&1 || true; done
++run ip_addr ip addr
++run ip_route ip route
++run wireless cat /proc/net/wireless
++echo '===== wifi_processes ====='; ps w | grep -E '[w]pa_supplicant|[u]dhcpc' || true
++echo '===== selected_dmesg ====='; dmesg 2>/dev/null | grep -Ei 'pmon|bios|dmi|wlan|wifi|firmware|sdio|ttyS|console|bootconsole' || true
++REMOTE
++ssh "${opts[@]}" "root@$ip" 'dmesg' >"$out/dmesg_${ip}_${stamp}.log" 2>&1 || true
++echo "summary=$summary"
++echo "dmesg=$out/dmesg_${ip}_${stamp}.log"
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/apply_boot_cfg_trial.sh	2026-07-16 06:10:07.572863730 +0800
+@@ -0,0 +1,20 @@
++#!/bin/sh
++# REFERENCE_ONLY_NOT_EXECUTED in round 2. Do not copy to or run on the board.
++set -eu
++cfg=/boot/boot.cfg
++stamp=$(date +%Y%m%d_%H%M%S)
++backup="/boot/boot.cfg.before_showmenu0_$stamp"
++tmp="/boot/.boot.cfg.$stamp.tmp"
++[ "$(grep -Ec '^timeout[[:space:]]+3[[:space:]]*$' "$cfg")" = 1 ] || { echo 'refuse: timeout must be 3'; exit 1; }
++[ "$(grep -Ec '^default[[:space:]]+0[[:space:]]*$' "$cfg")" = 1 ] || { echo 'refuse: default must be 0'; exit 1; }
++[ "$(grep -Ec '^showmenu[[:space:]]+1[[:space:]]*$' "$cfg")" = 1 ] || { echo 'refuse: showmenu must be 1'; exit 1; }
++first=$(awk '/^title[[:space:]]/{if (seen++) exit} /^title[[:space:]]/{seen=1} seen{print}' "$cfg")
++printf '%s\n' "$first" | grep -Eq '^[[:space:]]*kernel[[:space:]]+\(emmc0,0\)/boot/vmlinuz[[:space:]]*$' || { echo 'refuse: first kernel is not standard vmlinuz'; exit 1; }
++printf '%s\n' "$first" | grep -E '^[[:space:]]*args[[:space:]]+' | grep -Eq 'console=ttyS0([ ,]|$)' && { echo 'refuse: default args contain console=ttyS0'; exit 1; }
++cp -p "$cfg" "$backup"
++before=$(sha256sum "$cfg" | awk '{print $1}')
++sed 's/^showmenu[[:space:]]\{1,\}1[[:space:]]*$/showmenu 0/' "$cfg" >"$tmp"
++mv "$tmp" "$cfg"; sync
++after=$(sha256sum "$cfg" | awk '{print $1}')
++printf 'backup=%s\nbefore_sha256=%s\nafter_sha256=%s\n' "$backup" "$before" "$after"
++cat "$cfg"
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/rollback_boot_cfg_trial.sh	2026-07-16 06:10:07.573863733 +0800
+@@ -0,0 +1,13 @@
++#!/bin/sh
++# REFERENCE_ONLY_NOT_EXECUTED in round 2. Do not copy to or run on the board.
++set -eu
++backup=${1:?Usage: $0 /boot/boot.cfg.before_showmenu0_TIMESTAMP}
++cfg=/boot/boot.cfg
++case "$backup" in /boot/boot.cfg.before_showmenu0_*) ;; *) echo 'refuse: valid backup path required'; exit 1;; esac
++[ -f "$backup" ] || { echo 'refuse: backup does not exist'; exit 1; }
++expected=$(sha256sum "$backup" | awk '{print $1}')
++tmp="/boot/.boot.cfg.rollback.$$"
++cp -p "$backup" "$tmp"; mv "$tmp" "$cfg"; sync
++actual=$(sha256sum "$cfg" | awk '{print $1}')
++[ "$expected" = "$actual" ] || { echo 'rollback hash mismatch'; exit 1; }
++printf 'sha256=%s\n' "$actual"; cat "$cfg"
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/test_serial_recovery_logic.py	2026-07-16 06:10:29.054936543 +0800
+@@ -0,0 +1,25 @@
++#!/usr/bin/env python3
++"""Offline tests only: no serial device is opened."""
++import board_recover_serial as serial
++
++classification = [
++    (b'', serial.SERIAL_STATE_SILENT),
++    (b'PMON>', serial.SERIAL_STATE_PMON),
++    (b'seekfree boot menu', serial.SERIAL_STATE_PMON),
++    (b'Now booting...', serial.SERIAL_STATE_LINUX_BOOTING),
++    (b'Loading file...', serial.SERIAL_STATE_LINUX_BOOTING),
++    (b'\x01\xfe\x02', serial.SERIAL_STATE_UNKNOWN),
++    (b'SeEkFrEe BOOT MENU', serial.SERIAL_STATE_PMON),
++    (b'PMON> Now booting...', serial.SERIAL_STATE_LINUX_BOOTING),
++]
++for payload, expected in classification:
++    assert serial.classify_serial(payload) == expected, (payload, serial.classify_serial(payload))
++
++# Mocked write eligibility: actual os.open/os.write are never called in this module.
++assert not serial.should_write_cr(serial.SERIAL_STATE_PMON, False, False)
++assert serial.should_write_cr(serial.SERIAL_STATE_PMON, True, False)
++assert not serial.should_write_cr(serial.SERIAL_STATE_SILENT, True, False)
++assert serial.should_write_cr(serial.SERIAL_STATE_SILENT, True, True)
++assert not serial.should_write_cr(serial.SERIAL_STATE_UNKNOWN, True, False)
++assert not serial.should_write_cr(serial.SERIAL_STATE_LINUX_BOOTING, True, False)
++print('8 classification tests and 6 mocked write-eligibility tests passed')
+--- /dev/null	2026-07-15 17:57:59.387000060 +0800
++++ tools/pmon_recovery/README.md	2026-07-16 06:10:29.055936546 +0800
+@@ -0,0 +1,10 @@
++# PMON recovery tools
++
++All tools are conservative. `board_recover_serial.py` defaults to read-only; only an explicit `--send-cr` in PMON state writes exactly one `0x0D` to `/dev/ttyACM0`. A silent port additionally requires explicit `--force-single-cr-on-silent` and on-site confirmation. It never touches `/dev/ttyS0` or `/dev/ttyS1`.
++
++1. Run `./recover_board_and_wait_ssh.sh`.
++2. If it reports PMON, review the serial log and manually run the displayed `sudo ... --send-cr` command once.
++3. Confirm the shown host-key fingerprint, then use `./discover_board_ip.sh --accept-hostkey` and record it in `known_hosts` through your normal approved process. Do not remove existing entries.
++4. Run `./board_readonly_audit.sh BOARD_IP > audit_TIMESTAMP.log`.
++
++The apply/rollback scripts are `REFERENCE_ONLY_NOT_EXECUTED` for round 2. They must not be copied to or run on the board. The current `showmenu` value must be established by the read-only audit first.

@@ -60,3 +60,75 @@ else()
 endif()
 
 target_compile_options(robot_board_app PRIVATE -Wall -Wextra -Wpedantic)
+
+set(BOARD_NAVIGATION_SOURCES
+    navigation/motion_control.cpp
+    navigation/odometry.cpp
+    navigation/occupancy_grid.cpp
+    navigation/navigation_safety.cpp
+    navigation/hybrid_astar.cpp
+    navigation/path_follower.cpp
+    navigation/navigation_core.cpp
+    navigation/frontier_explorer.cpp
+)
+
+add_library(robot_navigation_core STATIC ${BOARD_NAVIGATION_SOURCES})
+target_include_directories(robot_navigation_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(robot_navigation_core PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(robot_board_app PRIVATE robot_navigation_core)
+
+add_executable(robot_board_navigation navigation/board_navigation_main.cpp)
+target_link_libraries(robot_board_navigation PRIVATE robot_navigation_core)
+target_compile_options(robot_board_navigation PRIVATE -Wall -Wextra -Wpedantic)
+
+add_library(robot_board_services_core STATIC
+    services/event_store.cpp
+    services/process_executor.cpp
+    sensors/smoke_sensor.cpp
+    voice/ci1302.cpp
+    mission/mission_orchestrator.cpp
+)
+target_include_directories(robot_board_services_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(robot_board_services_core PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(robot_board_services services/board_services_main.cpp)
+target_link_libraries(robot_board_services PRIVATE robot_board_services_core)
+target_compile_options(robot_board_services PRIVATE -Wall -Wextra -Wpedantic)
+
+if(ROBOT_BUILD_BOARD_VISION)
+    if(ROBOT_USE_LS2K0301_LIBRARY AND NOT OpenCV_DIR)
+        set(OpenCV_DIR "/opt/ls_2k0300_env/opencv_4_10_build/lib/cmake/opencv4"
+            CACHE PATH "LS2K0301 OpenCV package directory")
+    endif()
+    find_package(OpenCV QUIET COMPONENTS core imgproc imgcodecs videoio ml objdetect)
+    if(OpenCV_FOUND)
+        add_executable(robot_board_vision
+            vision/board_vision_main.cpp
+            vision/lost_item_detector.cpp
+            vision/aruco_book_detector.cpp
+            vision/detection_tracker.cpp
+        )
+        target_compile_definitions(robot_board_vision PRIVATE ROBOT_HAVE_OPENCV_ARUCO=1)
+        target_include_directories(robot_board_vision PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${OpenCV_INCLUDE_DIRS}
+        )
+        target_link_libraries(robot_board_vision PRIVATE ${OpenCV_LIBS})
+        target_compile_options(robot_board_vision PRIVATE -Wall -Wextra -Wpedantic)
+        add_custom_command(TARGET robot_board_vision POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_FILE_DIR:robot_board_vision>/models"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/../../library_patrol_final_demo/local_models/lost_item_hog_svm.xml"
+                "${CMAKE_SOURCE_DIR}/../../library_patrol_final_demo/local_models/lost_item_hog_svm.json"
+                "$<TARGET_FILE_DIR:robot_board_vision>/models"
+            COMMENT "Copying the HOG+SVM lost-item model next to the board vision binary")
+        if(ROBOT_USE_LS2K0301_LIBRARY)
+            set_target_properties(robot_board_vision PROPERTIES
+                BUILD_WITH_INSTALL_RPATH ON
+                INSTALL_RPATH "/opt/ls_2k0300_env/opencv_4_10_build/lib")
+        endif()
+    else()
+        message(WARNING "OpenCV vision modules were not found; robot_board_vision will not be built")
+    endif()
+endif()

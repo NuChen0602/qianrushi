@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "cwd": "/home/chen/Library_Patrol_Project/robot_2k03011/robot_2k0301/third_party/LS2K0301_Library/LS2K030x_Library/Example/Motherboard_Demo/E1_motherboard/E01_03_adc_battery_volatage_detection_demo/user",
+      "program": "/home/chen/Library_Patrol_Project/robot_2k03011/robot_2k0301/third_party/LS2K0301_Library/LS2K030x_Library/Example/Motherboard_Demo/E1_motherboard/E01_03_adc_battery_volatage_detection_demo/user/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

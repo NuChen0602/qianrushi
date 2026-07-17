@@ -9,4 +9,12 @@ cmake -S "${PROJECT_ROOT}" -B "${BUILD_DIR}" -DROBOT_USE_LS2K0301_LIBRARY=OFF
 cmake --build "${BUILD_DIR}"
 
 echo "host build done: ${BUILD_DIR}/board_app/robot_board_app"
-
+if [ -x "${BUILD_DIR}/board_app/robot_board_vision" ]; then
+  echo "host vision build done: ${BUILD_DIR}/board_app/robot_board_vision"
+fi
+if [ -x "${BUILD_DIR}/board_app/robot_board_navigation" ]; then
+  echo "host navigation build done: ${BUILD_DIR}/board_app/robot_board_navigation"
+fi
+if [ -x "${BUILD_DIR}/board_app/robot_board_services" ]; then
+  echo "host services build done: ${BUILD_DIR}/board_app/robot_board_services"
+fi

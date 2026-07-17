@@ -24,7 +24,7 @@ class NavigationClient:
     def _url(self, endpoint):
         return urljoin(self.dashboard_url, endpoint.lstrip("/"))
 
-    def _request_json(self, method, endpoint, payload=None):
+    def _request_json(self, method, endpoint, payload=None, timeout=None):
         data = None
         headers = {"Accept": "application/json"}
         if payload is not None:
@@ -37,10 +37,13 @@ class NavigationClient:
             method=method,
         )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            with urllib.request.urlopen(request, timeout=timeout or self.timeout) as response:
                 raw = response.read()
             self.last_error = ""
-            return json.loads(raw.decode("utf-8")) if raw else {"ok": True}
+            result = json.loads(raw.decode("utf-8")) if raw else {"ok": True}
+            if isinstance(result, dict) and result.get("ok") is False:
+                raise RuntimeError(f"navigation API rejected request: {result.get('error') or result.get('reason') or result}")
+            return result
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
             self.last_error = str(exc)
             raise RuntimeError(f"navigation API unavailable: {exc}") from exc
@@ -58,9 +61,9 @@ class NavigationClient:
             "yaw": float(point_dict.get("yaw", 0.0)),
             "name": str(point_dict.get("name", "目标点")),
         }
-        return self._request_json("POST", self.endpoints["goal"], payload)
+        return self._request_json("POST", self.endpoints["goal"], payload, timeout=3.0)
 
-    def start_patrol(self, waypoints):
+    def start_patrol(self, waypoints, pause_seconds=None):
         payload = {
             "repeat": False,
             "waypoints": [
@@ -73,16 +76,50 @@ class NavigationClient:
                 for item in waypoints
             ],
         }
-        return self._request_json("POST", self.endpoints["patrol"], payload)
+        if pause_seconds is not None:
+            payload["pause_seconds"] = max(0.0, float(pause_seconds))
+        return self._request_json("POST", self.endpoints["patrol"], payload, timeout=3.0)
 
     def cancel(self):
-        return self._request_json("POST", self.endpoints["cancel"], {})
+        try:
+            return self._request_json("POST", self.endpoints["cancel"], {}, timeout=1.0)
+        except RuntimeError as cancel_error:
+            # Some deployed dashboard versions reject an idempotent cancel with
+            # HTTP 400 when no goal exists.  Never treat every 400 as success:
+            # confirm from a fresh state snapshot that both navigation and
+            # patrol are already stopped before accepting the no-op cancel.
+            if "HTTP Error 400" not in str(cancel_error):
+                raise
+            try:
+                state = self.get_state()
+            except RuntimeError:
+                raise cancel_error
+            navigation = state.get("navigation", {}) if isinstance(state, dict) else {}
+            patrol = state.get("patrol", {}) if isinstance(state, dict) else {}
+            navigation_state = str(navigation.get("state", "")).lower()
+            patrol_state = str(patrol.get("state", "idle")).lower()
+            navigation_idle = navigation_state in {
+                "idle", "reached", "approached", "cancelled", "canceled",
+                "failed", "emergency_stopped",
+            }
+            patrol_idle = not bool(patrol.get("active", False)) and patrol_state in {
+                "", "idle", "waiting", "completed", "cancelled", "canceled",
+                "failed", "emergency_stopped",
+            }
+            if navigation_idle and patrol_idle:
+                return {
+                    "ok": True,
+                    "state": "idle",
+                    "cancelled": True,
+                    "reason": "already_idle_after_cancel_rejection",
+                }
+            raise cancel_error
 
     def emergency_stop(self):
-        return self._request_json("POST", self.endpoints["emergency_stop"], {})
+        return self._request_json("POST", self.endpoints["emergency_stop"], {}, timeout=0.8)
 
     def emergency_release(self):
-        return self._request_json("POST", self.endpoints["emergency_release"], {})
+        return self._request_json("POST", self.endpoints["emergency_release"], {}, timeout=1.5)
 
     def is_available(self):
         try:

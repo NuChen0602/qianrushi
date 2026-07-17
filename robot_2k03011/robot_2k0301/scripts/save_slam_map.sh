@@ -8,6 +8,10 @@ EXPECTED_MAP_HEIGHT_M="${EXPECTED_MAP_HEIGHT_M:-1.8}"
 MAP_SIZE_TOLERANCE_M="${MAP_SIZE_TOLERANCE_M:-0.20}"
 MAP_MAX_OUTER_EXCESS_M="${MAP_MAX_OUTER_EXCESS_M:-0.60}"
 MAP_MAX_UNKNOWN_RATIO="${MAP_MAX_UNKNOWN_RATIO:-0.50}"
+# A manually created map must be saved as observed.  The caller may still
+# opt in to the historical dimensional/unknown-cell quality gate with
+# SKIP_MAP_QUALITY_CHECK=0.
+SKIP_MAP_QUALITY_CHECK="${SKIP_MAP_QUALITY_CHECK:-1}"
 mkdir -p "$(dirname "${MAP_FILE}")"
 
 set +u
@@ -34,7 +38,7 @@ for suffix in posegraph data yaml pgm; do
 done
 
 restore_previous_map() {
-    echo "地图质量检查失败，保留本次结果并恢复保存前地图。"
+    echo "地图保存不完整，保留本次结果并恢复保存前地图。"
     for suffix in posegraph data yaml pgm; do
         if [[ -s "${MAP_FILE}.${suffix}" ]]; then
             mv "${MAP_FILE}.${suffix}" \
@@ -76,15 +80,19 @@ if [[ ! -s "${MAP_FILE}.yaml" || ! -s "${MAP_FILE}.pgm" ]]; then
     exit 1
 fi
 
-if ! python3 "${PROJECT_ROOT}/scripts/check_map_quality.py" \
-    --map-yaml "${MAP_FILE}.yaml" \
-    --expected-width "${EXPECTED_MAP_WIDTH_M}" \
-    --expected-height "${EXPECTED_MAP_HEIGHT_M}" \
-    --size-tolerance "${MAP_SIZE_TOLERANCE_M}" \
-    --max-outer-excess "${MAP_MAX_OUTER_EXCESS_M}" \
-    --max-unknown-ratio "${MAP_MAX_UNKNOWN_RATIO}"; then
-    restore_previous_map
-    exit 1
+if [[ "${SKIP_MAP_QUALITY_CHECK}" != "1" ]]; then
+    if ! python3 "${PROJECT_ROOT}/scripts/check_map_quality.py" \
+        --map-yaml "${MAP_FILE}.yaml" \
+        --expected-width "${EXPECTED_MAP_WIDTH_M}" \
+        --expected-height "${EXPECTED_MAP_HEIGHT_M}" \
+        --size-tolerance "${MAP_SIZE_TOLERANCE_M}" \
+        --max-outer-excess "${MAP_MAX_OUTER_EXCESS_M}" \
+        --max-unknown-ratio "${MAP_MAX_UNKNOWN_RATIO}"; then
+        restore_previous_map
+        exit 1
+    fi
+else
+    echo "已跳过地图质量检查（SKIP_MAP_QUALITY_CHECK=1）。"
 fi
 
 echo "SLAM pose graph saved: ${MAP_FILE}.posegraph"

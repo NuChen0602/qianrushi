@@ -1,4 +1,7 @@
 #include "hardware/robot_hardware.h"
+#include "navigation/navigation_core.h"
+#include "navigation/odometry.h"
+#include "navigation/motion_control.h"
 
 #include "hardware/lidar_scanner.h"
 #include "utils/logger.h"
@@ -371,6 +374,42 @@ bool RobotHardware::initialize()
 {
 #if ROBOT_USE_LS2K0301_LIBRARY
     Logger::info("initializing LS2K0301 motor/encoder/imu/servo hardware");
+
+    const auto require_device = [&](const std::string& path, const char* label) {
+        if(::access(path.c_str(), F_OK) == 0) return true;
+        Logger::error(std::string("required ") + label + " device is missing: " + path);
+        return false;
+    };
+    if(!require_device(config_.left_motor_pwm, "left motor PWM") ||
+       !require_device(config_.right_motor_pwm, "right motor PWM") ||
+       !require_device(config_.left_motor_dir, "left motor direction") ||
+       !require_device(config_.right_motor_dir, "right motor direction") ||
+       !require_device(config_.left_encoder, "left encoder") ||
+       !require_device(config_.right_encoder, "right encoder") ||
+       !require_device(config_.steering_servo_pwm, "steering servo PWM"))
+        return false;
+    if(config_.left_encoder_counts_per_meter <= 100.0 ||
+       config_.right_encoder_counts_per_meter <= 100.0)
+    {
+        Logger::error("encoder counts per meter configuration is invalid");
+        return false;
+    }
+    const double servo_min = std::min(config_.servo_left_deg, config_.servo_right_deg);
+    const double servo_max = std::max(config_.servo_left_deg, config_.servo_right_deg);
+    if(config_.servo_center_deg < servo_min || config_.servo_center_deg > servo_max ||
+       servo_min < 45.0 || servo_max > 135.0)
+    {
+        Logger::error("steering servo configuration is outside the safe 45..135 degree range");
+        return false;
+    }
+    if(config_.lidar_stop_distance_mm < 100 ||
+       config_.lidar_slow_distance_mm <= config_.lidar_stop_distance_mm)
+    {
+        Logger::error("lidar stop/slow distance configuration is invalid");
+        return false;
+    }
+    if(::access(config_.beep_gpio.c_str(), F_OK) != 0)
+        Logger::warn("optional beeper device is missing: " + config_.beep_gpio);
 
     g_motor = std::make_unique<DirectPwmMotorDriver>(config_);
     g_encoders = std::make_unique<EncoderDriver>(config_);
@@ -2132,6 +2171,201 @@ bool RobotHardware::runAngleTurn(
         Logger::warn("angle turn interrupted by signal");
     }
     return completed && sensor_ok;
+}
+
+bool RobotHardware::runBoardNavigation(
+    const std::string& map_yaml,
+    double start_x, double start_y, double start_yaw,
+    double goal_x, double goal_y, double goal_yaw,
+    int timeout_seconds)
+{
+    ActionSignalGuard signal_guard;
+    navigation::NavigationCore navigation_core;
+    if(!navigation_core.loadMap(map_yaml))
+    {
+        Logger::error("board navigation cannot load map: " + navigation_core.lastPlan().reason);
+        return false;
+    }
+
+    const navigation::Pose2D start{start_x, start_y, start_yaw};
+    navigation_core.setPose(start);
+    navigation_core.enqueueTask({"board_goal", {goal_x, goal_y, goal_yaw}, "navigate"});
+    navigation::OdometryEstimator odometry(
+        config_.left_encoder_counts_per_meter,
+        config_.right_encoder_counts_per_meter,
+        -1.0,
+        0.1);
+    odometry.reset(start);
+    navigation::SteeringCalibration steering(
+        {-1.0, -0.5, 0.0, 0.5, 1.0},
+        {config_.servo_right_deg,
+         0.5 * (config_.servo_right_deg + config_.servo_center_deg),
+         config_.servo_center_deg,
+         0.5 * (config_.servo_center_deg + config_.servo_left_deg),
+         config_.servo_left_deg},
+        {-28.0, -14.0, 0.0, 14.0, 28.0},
+        0.18);
+
+    LidarMonitorState lidar_state;
+    LidarScanner lidar(
+        config_.lidar_serial,
+        config_.lidar_min_valid_mm,
+        config_.lidar_self_mask_start_deg,
+        config_.lidar_self_mask_end_deg,
+        config_.lidar_self_mask_max_mm);
+    std::thread lidar_thread([&]() {
+        lidar.monitorFrontSector(
+            lidar_state,
+            config_.lidar_front_center_deg,
+            config_.lidar_front_half_width_deg);
+    });
+
+    const auto lidar_ready_deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while(!lidar_state.ready.load() && !lidar_state.failed.load() &&
+          std::chrono::steady_clock::now() < lidar_ready_deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    const auto first_scan_deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while(lidar_state.ready.load() && !lidar_state.failed.load() &&
+          lidar_state.scan_count.load() == 0 &&
+          std::chrono::steady_clock::now() < first_scan_deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    if(!lidar_state.ready.load() || lidar_state.failed.load() ||
+       lidar_state.scan_count.load() == 0)
+    {
+        Logger::error("board navigation aborted: lidar did not provide an initial scan");
+        lidar_state.running.store(false);
+        if(lidar_thread.joinable()) lidar_thread.join();
+        return false;
+    }
+
+    motor_stop();
+    calibrateImuGyroZ();
+    clearEncoders();
+    manual_steering_active_ = true;
+    writeSteeringServo(config_.servo_center_deg);
+    double requested_speed = 0.0;
+    bool completed = false;
+    const auto begin = std::chrono::steady_clock::now();
+    auto previous = begin;
+    auto last_scan_time = begin;
+    std::uint64_t last_scan_count = lidar_state.scan_count.load();
+    while(!signal_guard.stopRequested())
+    {
+        const auto cycle = std::chrono::steady_clock::now();
+        const double dt = std::clamp(
+            std::chrono::duration<double>(cycle - previous).count(), 0.001, 0.2);
+        previous = cycle;
+        const std::uint64_t scan_count = lidar_state.scan_count.load();
+        if(scan_count != last_scan_count)
+        {
+            last_scan_count = scan_count;
+            last_scan_time = cycle;
+        }
+        if(lidar_state.failed.load() ||
+           cycle - last_scan_time > std::chrono::milliseconds(600))
+        {
+            Logger::error("board navigation emergency stop: lidar data timeout");
+            break;
+        }
+        if(timeout_seconds > 0 &&
+           std::chrono::duration<double>(cycle - begin).count() >= timeout_seconds)
+        {
+            Logger::warn("board navigation timeout");
+            break;
+        }
+
+        int left_count = 0;
+        int right_count = 0;
+        if(std::abs(requested_speed) > 0.001)
+        {
+            speed_target_l_ = requested_speed * config_.left_encoder_counts_per_meter * dt;
+            speed_target_r_ = requested_speed * config_.right_encoder_counts_per_meter * dt;
+            motor_speed_loop(1, 0.0);
+            left_count = encoder_left_;
+            right_count = encoder_right_;
+        }
+        else
+        {
+            motor_stop();
+            const auto counts = readAndClearEncoders();
+            left_count = counts.first;
+            right_count = counts.second;
+        }
+
+        double gyro_z_dps = 0.0;
+#if ROBOT_USE_LS2K0301_LIBRARY
+        if(imu_ready_ && g_imu)
+            gyro_z_dps = (static_cast<double>(g_imu->gyroZ()) - imu_gyro_z_bias_) *
+                         config_.imu_gyro_z_scale;
+#endif
+        const auto odom = odometry.update(left_count, right_count, gyro_z_dps, dt);
+        if(!odom.valid)
+        {
+            requested_speed = 0.0;
+            Logger::warn("board navigation rejected invalid odometry sample");
+            std::this_thread::sleep_until(cycle + std::chrono::milliseconds(10));
+            continue;
+        }
+        navigation_core.setPose(odom.pose);
+
+        std::vector<navigation::LaserPoint> obstacles;
+        const auto add_obstacle = [&](int distance_mm, double relative_angle) {
+            if(distance_mm <= 0) return;
+            const double distance = distance_mm / 1000.0;
+            const double angle = odom.pose.yaw + relative_angle;
+            obstacles.push_back({odom.pose.x + distance * std::cos(angle),
+                                 odom.pose.y + distance * std::sin(angle), distance});
+        };
+        add_obstacle(lidar_state.front_distance_mm.load(), 0.0);
+        add_obstacle(lidar_state.left_distance_mm.load(), navigation::kPi * 0.5);
+        add_obstacle(lidar_state.rear_distance_mm.load(), navigation::kPi);
+        add_obstacle(lidar_state.right_distance_mm.load(), -navigation::kPi * 0.5);
+        navigation_core.setDynamicObstacles(std::move(obstacles));
+
+        auto command = navigation_core.update(dt);
+        const int motion_distance = command.speed_mps >= 0.0
+            ? lidar_state.front_distance_mm.load()
+            : lidar_state.rear_distance_mm.load();
+        if(std::abs(command.speed_mps) > 0.001 && motion_distance > 0)
+        {
+            if(motion_distance <= config_.lidar_stop_distance_mm)
+                command.speed_mps = 0.0;
+            else if(motion_distance < config_.lidar_slow_distance_mm)
+            {
+                const double scale = std::clamp(
+                    (motion_distance - config_.lidar_stop_distance_mm) /
+                    static_cast<double>(std::max(1,
+                        config_.lidar_slow_distance_mm - config_.lidar_stop_distance_mm)),
+                    0.25, 1.0);
+                command.speed_mps *= scale;
+            }
+        }
+
+        requested_speed = command.speed_mps;
+        writeSteeringServo(steering.servoDegrees(command.steering));
+        if(command.goal_reached)
+        {
+            completed = true;
+            Logger::info("board navigation goal reached");
+            break;
+        }
+        if(command.reason.rfind("planning_failed", 0) == 0)
+        {
+            Logger::error(command.reason);
+            break;
+        }
+        std::this_thread::sleep_until(cycle + std::chrono::milliseconds(10));
+    }
+
+    motor_stop();
+    resetSpeedLoopState();
+    manual_steering_active_ = false;
+    writeSteeringServo(config_.servo_center_deg);
+    lidar_state.running.store(false);
+    if(lidar_thread.joinable()) lidar_thread.join();
+    return completed;
 }
 
 bool RobotHardware::runOdometryTcpServer(int port, bool enable_remote_drive)

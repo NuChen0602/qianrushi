@@ -249,6 +249,7 @@ class NavigationDashboard(Node):
             'index': -1,
             'waypoints': [],
             'state': 'idle',
+            'pause_seconds': self.patrol_pause_sec,
         }
         self.next_patrol_goal_due = 0.0
         self.running = True
@@ -405,14 +406,14 @@ class NavigationDashboard(Node):
                         self.patrol['index'] = -1
                         self.patrol['state'] = 'waiting'
                         self.next_patrol_goal_due = (
-                            time.monotonic() + self.patrol_pause_sec)
+                            time.monotonic() + self.patrol['pause_seconds'])
                     else:
                         self.patrol['active'] = False
                         self.patrol['state'] = 'completed'
                 else:
                     self.patrol['state'] = 'waiting'
                     self.next_patrol_goal_due = (
-                        time.monotonic() + self.patrol_pause_sec)
+                        time.monotonic() + self.patrol['pause_seconds'])
             elif state in ('failed', 'cancelled', 'emergency_stopped'):
                 self.patrol['active'] = False
                 self.patrol['state'] = state
@@ -473,6 +474,7 @@ class NavigationDashboard(Node):
                     'repeat': self.patrol['repeat'],
                     'index': self.patrol['index'],
                     'state': self.patrol['state'],
+                    'pause_seconds': self.patrol['pause_seconds'],
                     'waypoints': [
                         dict(item) for item in self.patrol['waypoints']
                     ],
@@ -585,6 +587,11 @@ class NavigationDashboard(Node):
             raise ValueError('waypoints exceeds the limit of 100')
         waypoints = [self.parse_pose(item) for item in raw_waypoints]
         repeat = bool(payload.get('repeat', False))
+        pause_seconds = finite_float(
+            payload.get('pause_seconds', self.patrol_pause_sec),
+            'pause_seconds')
+        if not 0.0 <= pause_seconds <= 30.0:
+            raise ValueError('pause_seconds must be between 0 and 30')
         with self.state_lock:
             if self.emergency_stop:
                 raise ValueError('release emergency stop before patrol')
@@ -594,6 +601,7 @@ class NavigationDashboard(Node):
                 'index': 0,
                 'waypoints': waypoints,
                 'state': 'navigating',
+                'pause_seconds': pause_seconds,
             }
         self.publish_goal(waypoints[0])
         self.record_event(
@@ -605,6 +613,7 @@ class NavigationDashboard(Node):
                 'active': True,
                 'repeat': repeat,
                 'waypoint_count': len(waypoints),
+                'pause_seconds': pause_seconds,
             }
         }
 

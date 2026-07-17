@@ -137,6 +137,7 @@ button.danger {
 }
 
 .robot-dot,
+.scan-dot,
 .goal-dot,
 .point-dot {
   width: 10px;
@@ -145,6 +146,7 @@ button.danger {
 }
 
 .robot-dot { background: var(--accent); }
+.scan-dot { background: #0ea5e9; }
 .goal-dot { background: #c43a31; }
 .point-dot { background: var(--accent-2); }
 .path-line {
@@ -207,6 +209,7 @@ button.danger {
   border-radius: 2px;
 }
 
+.aruco-box-key { border-color: #22c55e !important; }
 .candidate-box-key { border-color: #facc15 !important; }
 .confirmed-box-key { border-color: #ef4444 !important; }
 

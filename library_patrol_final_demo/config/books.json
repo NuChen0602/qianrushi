@@ -1,0 +1,25 @@
+{
+  "source": "../../LS2K0301_Library/aruco_board_stream/book_database.json",
+  "shelves": {
+    "A1": {"point": "ENG_SHELF_B1", "name": "工科书架"},
+    "A2": {"point": "SCI_SHELF_C1", "name": "理科书架"},
+    "A3": {"point": "LIT_SHELF_A3", "name": "文学历史书架"}
+  },
+  "books": [
+    {"id": 101, "name": "工程控制论（上册）（第三版）", "aliases": ["工程控制论", "控制论"], "category": "工科技术类", "shelf_id": "A1", "shelf_point": "ENG_SHELF_B1", "shelf_name": "工科书架", "rank": 1},
+    {"id": 102, "name": "机器视觉", "aliases": ["计算机视觉"], "category": "工科技术类", "shelf_id": "A1", "shelf_point": "ENG_SHELF_B1", "shelf_name": "工科书架", "rank": 2},
+    {"id": 103, "name": "微型计算机系统原理及应用（第3版）", "aliases": ["微型计算机系统原理", "微机原理"], "category": "工科技术类", "shelf_id": "A1", "shelf_point": "ENG_SHELF_B1", "shelf_name": "工科书架", "rank": 3},
+    {"id": 104, "name": "现代工程技术与创新实践", "aliases": ["现代工程技术", "创新实践"], "category": "工科技术类", "shelf_id": "A1", "shelf_point": "ENG_SHELF_B1", "shelf_name": "工科书架", "rank": 4},
+    {"id": 105, "name": "电路（第6版）", "aliases": ["电路", "电路第六版"], "category": "工科技术类", "shelf_id": "A1", "shelf_point": "ENG_SHELF_B1", "shelf_name": "工科书架", "rank": 5},
+    {"id": 151, "name": "工科数学分析（上册）", "aliases": ["工科数学分析", "数学分析"], "category": "理学科普类", "shelf_id": "A2", "shelf_point": "SCI_SHELF_C1", "shelf_name": "理科书架", "rank": 1},
+    {"id": 152, "name": "科研人的自我修养", "aliases": ["科研人", "科研修养"], "category": "理学科普类", "shelf_id": "A2", "shelf_point": "SCI_SHELF_C1", "shelf_name": "理科书架", "rank": 2},
+    {"id": 153, "name": "物理学（第七版）上册", "aliases": ["物理学上册", "物理上册"], "category": "理学科普类", "shelf_id": "A2", "shelf_point": "SCI_SHELF_C1", "shelf_name": "理科书架", "rank": 3},
+    {"id": 154, "name": "物理学（第七版）下册", "aliases": ["物理学下册", "物理下册"], "category": "理学科普类", "shelf_id": "A2", "shelf_point": "SCI_SHELF_C1", "shelf_name": "理科书架", "rank": 4},
+    {"id": 155, "name": "量子简史", "aliases": ["量子", "量子历史"], "category": "理学科普类", "shelf_id": "A2", "shelf_point": "SCI_SHELF_C1", "shelf_name": "理科书架", "rank": 5},
+    {"id": 201, "name": "苏东坡传", "aliases": ["苏东坡", "东坡传"], "category": "文学历史类", "shelf_id": "A3", "shelf_point": "LIT_SHELF_A3", "shelf_name": "文学历史书架", "rank": 1},
+    {"id": 202, "name": "霍乱时期的爱情", "aliases": ["霍乱时期", "霍乱爱情"], "category": "文学历史类", "shelf_id": "A3", "shelf_point": "LIT_SHELF_A3", "shelf_name": "文学历史书架", "rank": 2},
+    {"id": 203, "name": "百年孤独", "aliases": ["百年", "孤独"], "category": "文学历史类", "shelf_id": "A3", "shelf_point": "LIT_SHELF_A3", "shelf_name": "文学历史书架", "rank": 3},
+    {"id": 204, "name": "瓦尔登湖", "aliases": ["瓦尔登", "华尔登湖"], "category": "文学历史类", "shelf_id": "A3", "shelf_point": "LIT_SHELF_A3", "shelf_name": "文学历史书架", "rank": 4},
+    {"id": 205, "name": "大国崛起", "aliases": ["大国", "崛起"], "category": "文学历史类", "shelf_id": "A3", "shelf_point": "LIT_SHELF_A3", "shelf_name": "文学历史书架", "rank": 5}
+  ]
+}

@@ -154,7 +154,7 @@ def main():
         description=(
             'Validate raw lidar and odometry streams before ROS2 '
             'SLAM starts.'))
-    parser.add_argument('--host', default='192.168.123.70')
+    parser.add_argument('--host', default='192.168.43.192')
     parser.add_argument('--lidar-port', type=int, default=2368)
     parser.add_argument('--odom-port', type=int, default=2369)
     parser.add_argument('--lidar-samples', type=int, default=5)

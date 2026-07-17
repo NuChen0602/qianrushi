@@ -6,12 +6,24 @@ from robot_lidar_bridge.motion_control import (
     SteeringCalibration,
     curvature_steering_command,
     curvature_speed_limit,
+    forward_lateral_displacement,
     peak_path_curvature,
     signed_path_curvature,
 )
 
 
 class MotionControlTest(unittest.TestCase):
+    def test_final_forward_progress_uses_arrival_heading(self):
+        forward, lateral = forward_lateral_displacement(
+            1.0, 2.0, math.radians(90.0), 1.0, 2.05)
+        self.assertAlmostEqual(forward, 0.05, places=6)
+        self.assertAlmostEqual(lateral, 0.0, places=6)
+
+        forward, lateral = forward_lateral_displacement(
+            1.0, 2.0, 0.0, 1.05, 2.02)
+        self.assertAlmostEqual(forward, 0.05, places=6)
+        self.assertAlmostEqual(lateral, 0.02, places=6)
+
     def test_signed_curvature_and_ackermann_feedforward(self):
         left_path = [
             (0.0, 0.0, 0.0),

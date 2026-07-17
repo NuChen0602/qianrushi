@@ -14,7 +14,7 @@ def normalize_degrees(angle):
 def main():
     parser = argparse.ArgumentParser(
         description='Display integrated IMU Z-axis yaw from the board odometry stream.')
-    parser.add_argument('--host', default='192.168.123.70')
+    parser.add_argument('--host', default='192.168.43.192')
     parser.add_argument('--port', type=int, default=2369)
     parser.add_argument('--sign', type=float, default=1.0)
     parser.add_argument('--display-hz', type=float, default=10.0)

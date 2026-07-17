@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROS_WS="${PROJECT_ROOT}/ros2_ws"
-BOARD_IP="${BOARD_IP:-192.168.123.70}"
+BOARD_IP="${BOARD_IP:-192.168.43.192}"
 BOARD_DIR="/home/root/robot_2k0301"
 MAPPING_LOG="${MAPPING_LOG:-/tmp/robot_mapping_keyboard.log}"
 MAPPING_PID=""
@@ -71,5 +71,5 @@ echo "RViz与安全监控已就绪。按Q后将自动停车并保存地图。"
 ros2 run robot_lidar_bridge keyboard_teleop
 
 sleep 1
-"${PROJECT_ROOT}/scripts/save_slam_map.sh"
+SKIP_MAP_QUALITY_CHECK=1 "${PROJECT_ROOT}/scripts/save_slam_map.sh"
 echo "键盘建图完成，日志：${MAPPING_LOG}"

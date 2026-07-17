@@ -13,8 +13,18 @@ fi
 
 cmake -S "${PROJECT_ROOT}" -B "${BUILD_DIR}" \
   -DROBOT_USE_LS2K0301_LIBRARY=ON \
+  -DROBOT_BUILD_BOARD_VISION="${ROBOT_BUILD_BOARD_VISION:-OFF}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}"
 
 cmake --build "${BUILD_DIR}"
 
 echo "LS2K0301 build done: ${BUILD_DIR}/board_app/robot_board_app"
+if [ -x "${BUILD_DIR}/board_app/robot_board_vision" ]; then
+  echo "LS2K0301 vision build done: ${BUILD_DIR}/board_app/robot_board_vision"
+fi
+if [ -x "${BUILD_DIR}/board_app/robot_board_navigation" ]; then
+  echo "LS2K0301 navigation build done: ${BUILD_DIR}/board_app/robot_board_navigation"
+fi
+if [ -x "${BUILD_DIR}/board_app/robot_board_services" ]; then
+  echo "LS2K0301 services build done: ${BUILD_DIR}/board_app/robot_board_services"
+fi

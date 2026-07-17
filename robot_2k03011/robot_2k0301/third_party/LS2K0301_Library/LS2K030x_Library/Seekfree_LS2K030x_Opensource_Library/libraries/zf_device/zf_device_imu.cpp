@@ -46,6 +46,58 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <dirent.h>
+
+namespace
+{
+const char *IIO_ROOT = "/sys/bus/iio/devices";
+
+// IIO device numbers depend on which kernel drivers are enabled.  Discover the
+// IMU by its kernel name instead of assuming it is always iio:device1.
+bool find_imu_iio_path(char *path, size_t path_size)
+{
+    DIR *dir = opendir(IIO_ROOT);
+    if(dir == NULL) return false;
+
+    bool found = false;
+    struct dirent *entry = NULL;
+    while((entry = readdir(dir)) != NULL)
+    {
+        if(strncmp(entry->d_name, "iio:device", 10) != 0) continue;
+
+        char name_path[256] = {0};
+        snprintf(name_path, sizeof(name_path), "%s/%s/name", IIO_ROOT, entry->d_name);
+        int fd = open(name_path, O_RDONLY);
+        if(fd < 0) continue;
+
+        char name[64] = {0};
+        const ssize_t length = read(fd, name, sizeof(name) - 1);
+        close(fd);
+        if(length <= 0) continue;
+
+        while(name[length > 0 ? length - 1 : 0] == '\n' ||
+              name[length > 0 ? length - 1 : 0] == '\r')
+        {
+            name[strlen(name) - 1] = '\0';
+        }
+        if(strcmp(name, "zf_device_imu") == 0)
+        {
+            snprintf(path, path_size, "%s/%s", IIO_ROOT, entry->d_name);
+            found = true;
+            break;
+        }
+    }
+    closedir(dir);
+    return found;
+}
+
+int open_imu_attribute(const char *device_path, const char *attribute, int flags)
+{
+    char path[320] = {0};
+    snprintf(path, sizeof(path), "%s/%s", device_path, attribute);
+    return open(path, flags);
+}
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介 构造函数
@@ -125,12 +177,21 @@ imu_device_type_enum zf_device_imu::init(void)
     int fd_event = -1;
     char read_buf[10] = {0};
     int read_val = DEV_NO_FIND;
+    char device_path[256] = {0};
 
-    // 第一步：写入1 执行IMU硬件初始化 【路径替换为宏定义】
-    fd_event = open(IMU_EVENT_PATH, O_RDWR);  // 读写模式打开：先写后读
+    imu_close_all_fd();
+    imu_type = DEV_NO_FIND;
+    if(!find_imu_iio_path(device_path, sizeof(device_path)))
+    {
+        printf("IMU IIO device zf_device_imu not found\r\n");
+        return imu_type;
+    }
+
+    // 第一步：写入1 执行IMU硬件初始化
+    fd_event = open_imu_attribute(device_path, "events/in_voltage_change_en", O_RDWR);
     if(fd_event < 0)
     {
-        printf("IMU open event file fail: %s, errno:%d\r\n", IMU_EVENT_PATH, errno);
+        printf("IMU open event file fail: %s/events/in_voltage_change_en, errno:%d\r\n", device_path, errno);
         imu_type = DEV_NO_FIND;
         return imu_type;
     }
@@ -153,7 +214,8 @@ imu_device_type_enum zf_device_imu::init(void)
     fd_event = -1;
 
     // 校验读取的型号值有效性，赋值到设备类型
-    if(read_val == DEV_IMU660RA || read_val == DEV_IMU660RB || read_val == DEV_IMU963RA)
+    if(read_val == DEV_IMU660RA || read_val == DEV_IMU660RB ||
+       read_val == DEV_IMU660RC || read_val == DEV_IMU963RA)
     {
         imu_type = (imu_device_type_enum)read_val;
         // 打印数值+对应枚举名称
@@ -164,6 +226,9 @@ imu_device_type_enum zf_device_imu::init(void)
                 break;
             case DEV_IMU660RB:
                 printf("IMU init success, type: %d (DEV_IMU660RB)\r\n", imu_type);
+                break;
+            case DEV_IMU660RC:
+                printf("IMU init success, type: %d (DEV_IMU660RC)\r\n", imu_type);
                 break;
             case DEV_IMU963RA:
                 printf("IMU init success, type: %d (DEV_IMU963RA)\r\n", imu_type);
@@ -182,23 +247,23 @@ imu_device_type_enum zf_device_imu::init(void)
 
     // 第三步：按型号动态打开对应传感器文件 【只打开一次】 【路径替换为宏定义】
     // 所有型号都默认打开 加速度+陀螺仪 6个文件，这是基础功能
-    fd_acc_x  = open(IMU_ACC_X_PATH,  O_RDONLY);
-    fd_acc_y  = open(IMU_ACC_Y_PATH,  O_RDONLY);
-    fd_acc_z  = open(IMU_ACC_Z_PATH,  O_RDONLY);
-    fd_gyro_x = open(IMU_GYRO_X_PATH, O_RDONLY);
-    fd_gyro_y = open(IMU_GYRO_Y_PATH, O_RDONLY);
-    fd_gyro_z = open(IMU_GYRO_Z_PATH, O_RDONLY);
+    fd_acc_x  = open_imu_attribute(device_path, "in_accel_x_raw", O_RDONLY);
+    fd_acc_y  = open_imu_attribute(device_path, "in_accel_y_raw", O_RDONLY);
+    fd_acc_z  = open_imu_attribute(device_path, "in_accel_z_raw", O_RDONLY);
+    fd_gyro_x = open_imu_attribute(device_path, "in_anglvel_x_raw", O_RDONLY);
+    fd_gyro_y = open_imu_attribute(device_path, "in_anglvel_y_raw", O_RDONLY);
+    fd_gyro_z = open_imu_attribute(device_path, "in_anglvel_z_raw", O_RDONLY);
 
     // 只有 IMU963RA 才打开磁力计3个文件，660系列不打开，节省资源
     if(imu_type == DEV_IMU963RA)
     {
-        fd_mag_x  = open(IMU_MAG_X_PATH,  O_RDONLY);
-        fd_mag_y  = open(IMU_MAG_Y_PATH,  O_RDONLY);
-        fd_mag_z  = open(IMU_MAG_Z_PATH,  O_RDONLY);
+        fd_mag_x  = open_imu_attribute(device_path, "in_magn_x_raw", O_RDONLY);
+        fd_mag_y  = open_imu_attribute(device_path, "in_magn_y_raw", O_RDONLY);
+        fd_mag_z  = open_imu_attribute(device_path, "in_magn_z_raw", O_RDONLY);
     }
 
     // 第四步：校验文件句柄有效性
-    if(imu_type == DEV_IMU660RA || imu_type == DEV_IMU660RB)
+    if(imu_type == DEV_IMU660RA || imu_type == DEV_IMU660RB || imu_type == DEV_IMU660RC)
     {
         // 660系列只校验加速度+陀螺仪
         if(fd_acc_x<0 || fd_acc_y<0 || fd_acc_z<0 || fd_gyro_x<0 || fd_gyro_y<0 || fd_gyro_z<0)

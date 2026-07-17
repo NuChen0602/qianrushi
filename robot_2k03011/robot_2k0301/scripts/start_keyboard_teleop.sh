@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-BOARD_IP="${BOARD_IP:-192.168.123.70}"
+BOARD_IP="${BOARD_IP:-192.168.43.192}"
 BOARD_DIR="/home/root/robot_2k0301"
 SPEED="${1:-40}"
 

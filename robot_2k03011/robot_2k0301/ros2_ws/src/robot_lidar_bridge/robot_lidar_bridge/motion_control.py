@@ -10,6 +10,19 @@ def normalize_angle(angle):
     return math.atan2(math.sin(angle), math.cos(angle))
 
 
+def forward_lateral_displacement(
+        start_x, start_y, start_yaw, current_x, current_y):
+    """Project a world-frame displacement onto the initial vehicle heading."""
+    dx = float(current_x) - float(start_x)
+    dy = float(current_y) - float(start_y)
+    cosine = math.cos(float(start_yaw))
+    sine = math.sin(float(start_yaw))
+    return (
+        dx * cosine + dy * sine,
+        -dx * sine + dy * cosine,
+    )
+
+
 def piecewise_linear(value, input_points, output_points):
     if len(input_points) != len(output_points) or len(input_points) < 2:
         raise ValueError('calibration tables must have equal lengths >= 2')

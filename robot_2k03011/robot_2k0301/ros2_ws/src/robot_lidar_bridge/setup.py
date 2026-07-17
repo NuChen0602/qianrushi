@@ -50,6 +50,7 @@ setup(
             'navigation_dashboard = robot_lidar_bridge.navigation_dashboard:main',
             'occupancy_grid_cells = robot_lidar_bridge.occupancy_grid_cells:main',
             'ips200_map_stream = robot_lidar_bridge.ips200_map_stream:main',
+            'frontier_explorer = robot_lidar_bridge.frontier_explorer:main',
         ],
     },
 )
